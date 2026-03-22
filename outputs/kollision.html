@@ -719,11 +719,19 @@ DANACH:
 EXTRAKTION – SEHR WICHTIG:
 Du erhältst vor jeder User-Nachricht einen [STATUS]-Block mit bereits gesammelten Daten.
 - Frage NIE nach Informationen, die im STATUS bereits vorhanden sind (nicht null)
-- Extrahiere aus JEDER User-Nachricht alle erkennbaren Infos
+- Extrahiere aus JEDER User-Nachricht ALLE erkennbaren Informationen, besonders aus der Erstbeschreibung:
+  * "ich"/"ich bin gefahren"/"ich fuhr"/"ich war am Steuer" → lenker: "Sie selbst"; Nennung einer anderen Person → lenker: "Eine andere Person"
+  * "gestern"/"heute"/konkretes Datum → datum
+  * Uhrzeit (z.B. "um 14:30", "gegen Mittag") → uhrzeit im Format HH:MM
+  * Ortsnamen oder PLZ (z.B. "in Winterthur", "auf der A1 bei Zürich") → schadenortPlz
+  * "Polizei war vor Ort"/"hat rapportiert"/"Polizeirapport"/"Polizei aufgeboten" → polizeirapport: "Ja"; "ohne Polizei"/"kein Rapport" → polizeirapport: "Nein"
+  * "unter Alkohol"/"betrunken"/"angetrunken"/"Drogen"/"Medikamente"/"übermüdet"/"unter Einfluss" → einfluss: "Ja"; "nüchtern"/"kein Alkohol"/"ohne Einfluss" → einfluss: "Nein"
+  * "überhöhte Geschwindigkeit"/"zu schnell"/"Tempoüberschreitung"/"viel zu schnell" → geschwindigkeit: "Ja"; "normale Geschwindigkeit"/"mit erlaubter Geschwindigkeit" → geschwindigkeit: "Nein"
+  * "Unfallprotokoll ausgefüllt"/"Protokoll erstellt"/"Europäisches Unfallprotokoll" → unfallprotokoll: "Ja"; "kein Protokoll" → unfallprotokoll: "Nein"
 - Springe direkt zur nächsten FEHLENDEN Information
 
 ANTWORTFORMAT – IMMER NUR VALIDES JSON, KEIN ANDERER TEXT, KEINE MARKDOWN-BLÖCKE:
-{"text":"Nachricht","quickReplies":[],"showDatepicker":false,"showTimepicker":false,"showLandpicker":false,"showFahrzeugpicker":false,"extracted":{"ersterHergang":null,"datum":null},"identExtracted":{"kontrollschild":null,"plz":null,"geburtsdatum":null,"schadenortPlz":null},"nextStage":"ersterHergang"}
+{"text":"Nachricht","quickReplies":[],"showDatepicker":false,"showTimepicker":false,"showLandpicker":false,"showFahrzeugpicker":false,"extracted":{"ersterHergang":null,"datum":null,"uhrzeit":null,"lenker":null,"polizeirapport":null,"einfluss":null,"geschwindigkeit":null,"unfallprotokoll":null},"identExtracted":{"kontrollschild":null,"plz":null,"geburtsdatum":null,"schadenortPlz":null},"nextStage":"ersterHergang"}
 
 WERTE FÜR nextStage: ersterHergang | datum | uhrzeit | schadenortLand | schadenortPlz | kontrollschild | plz | geburtsdatum | fahrzeug | hergang | lenker | summary | coverage | phone | complete`;
 
@@ -831,6 +839,12 @@ function showSummaryCard() {
     ['Geschädigtes',    d.wasGeschaedigt,  null],
     ['Kollisionsart',   d.schadenshergang, null],
     ['Hergang',         d.hergang,         'hergang'],
+    ['Lenker:in',       d.lenker,          null],
+    ['Verantwortung',   d.verantwortung,   null],
+    ['Polizeirapport',  d.polizeirapport,  null],
+    ['Einfluss',        d.einfluss,        null],
+    ['Geschwindigkeit', d.geschwindigkeit, null],
+    ['Unfallprotokoll', d.unfallprotokoll, null],
   ].filter(r => r[1]);
 
   const html = `
@@ -1028,6 +1042,53 @@ function setQR(opts) {
   });
 }
 
+// ═══════════════════════════════════════════
+// QR STAGE HELPERS
+// ═══════════════════════════════════════════
+const QR_SEQ = ['lenker','verantwortung','polizeirapport','einfluss','geschwindigkeit','unfallprotokoll'];
+
+function getStageQ(stage) {
+  const self = S.data.lenker === 'Sie selbst';
+  return {
+    lenker:          'Wer lenkte das Fahrzeug zum Zeitpunkt des Unfalls?',
+    verantwortung:   'Fühlen Sie sich verantwortlich für diesen Unfall?',
+    polizeirapport:  'Wurde ein Polizeirapport erstellt?',
+    einfluss:        self ? 'Standen Sie zum Zeitpunkt des Unfalls unter Einfluss von Alkohol, Drogen, Medikamenten oder Übermüdung?' : 'Stand die Lenkerin/der Lenker unter Einfluss von Alkohol, Drogen, Medikamenten oder Übermüdung?',
+    geschwindigkeit: self ? 'Haben Sie die Geschwindigkeit massiv überschritten?' : 'War massiv überhöhte Geschwindigkeit im Spiel?',
+    unfallprotokoll: 'Wurde ein Unfallprotokoll erstellt?'
+  }[stage] || '';
+}
+
+function getStageQR(stage) {
+  return {
+    lenker:          ['Sie selbst', 'Eine andere Person'],
+    verantwortung:   ['Ja', 'Nein', 'Teilweise'],
+    polizeirapport:  ['Ja', 'Nein'],
+    einfluss:        ['Ja', 'Nein', 'Unbekannt'],
+    geschwindigkeit: ['Ja', 'Nein', 'Unbekannt'],
+    unfallprotokoll: ['Ja', 'Nein']
+  }[stage] || [];
+}
+
+// Returns the first unfilled QR stage AFTER fromStage (or 'summary')
+function advanceQR(fromStage) {
+  let i = QR_SEQ.indexOf(fromStage) + 1;
+  for (; i < QR_SEQ.length; i++) {
+    if (!S.data[QR_SEQ[i]]) return QR_SEQ[i];
+  }
+  return 'summary';
+}
+
+// Returns the first unfilled QR stage starting FROM fromStage (or 'summary')
+function firstUnfilledQR(fromStage) {
+  let i = QR_SEQ.indexOf(fromStage);
+  if (i < 0) i = 0;
+  for (; i < QR_SEQ.length; i++) {
+    if (!S.data[QR_SEQ[i]]) return QR_SEQ[i];
+  }
+  return 'summary';
+}
+
 function handleQR(opt) {
   clearInputUi();
 
@@ -1067,88 +1128,54 @@ function handleQR(opt) {
     return;
   }
 
-  // Kollisionsart → hardcoded: Zusammenstoss mit Gegenstand → freier Hergang
+  // Kollisionsart → hardcoded: Zusammenstoss mit Gegenstand
+  // If hergang already known from initial description → skip directly to QR stages
   if (opt === 'Zusammenstoss mit Gegenstand' && S.stage === 'schadenshergang') {
     S.data.schadenshergang = 'Zusammenstoss mit Gegenstand';
     addMsg('user', opt);
-    S.stage = 'hergang';
     renderHeader();
-    addMsg('bot', 'Bitte beschreiben Sie den genauen Unfall- bzw. Schadenhergang.');
-    setEnabled(true);
-    setTimeout(() => $inp.focus(), 50);
+    // Pre-fill hergang from initial description if not already set
+    if (!S.data.hergang && S.data.ersterHergang) {
+      S.data.hergang = S.data.ersterHergang;
+    }
+    if (S.data.hergang) {
+      // Skip hergang question, go to first unfilled QR stage
+      const nxt = firstUnfilledQR('lenker');
+      if (nxt === 'summary') {
+        S.stage = 'summary';
+        addMsg('bot', 'Vielen Dank für Ihre Angaben! Hier ist Ihre Zusammenfassung:');
+        setTimeout(showSummaryCard, 200);
+        setTimeout(() => setQR(['Angaben bestätigen']), 400);
+      } else {
+        S.stage = nxt;
+        addMsg('bot', getStageQ(nxt));
+        setQR(getStageQR(nxt));
+      }
+    } else {
+      S.stage = 'hergang';
+      addMsg('bot', 'Bitte beschreiben Sie den genauen Unfall- bzw. Schadenhergang.');
+      setEnabled(true);
+      setTimeout(() => $inp.focus(), 50);
+    }
     return;
   }
 
-  // Lenker (any option)
-  if (S.stage === 'lenker') {
-    S.data.lenker = opt;
+  // Unified QR stage handler (lenker → verantwortung → polizeirapport → einfluss → geschwindigkeit → unfallprotokoll)
+  if (QR_SEQ.includes(S.stage)) {
+    S.data[S.stage] = opt;
     addMsg('user', opt);
-    S.stage = 'verantwortung';
     renderHeader();
-    addMsg('bot', 'Fühlen Sie sich verantwortlich für diesen Unfall?');
-    setQR(['Ja', 'Nein', 'Teilweise']);
-    return;
-  }
-
-  // Verantwortung (any option)
-  if (S.stage === 'verantwortung') {
-    S.data.verantwortung = opt;
-    addMsg('user', opt);
-    S.stage = 'polizeirapport';
-    renderHeader();
-    addMsg('bot', 'Wurde ein Polizeirapport erstellt?');
-    setQR(['Ja', 'Nein']);
-    return;
-  }
-
-  // Polizeirapport (any option)
-  if (S.stage === 'polizeirapport') {
-    S.data.polizeirapport = opt;
-    addMsg('user', opt);
-    S.stage = 'einfluss';
-    renderHeader();
-    const self = S.data.lenker === 'Sie selbst';
-    addMsg('bot', self
-      ? 'Standen Sie zum Zeitpunkt des Unfalls unter Einfluss von Alkohol, Drogen, Medikamenten oder Übermüdung?'
-      : 'Stand die Lenkerin/der Lenker unter Einfluss von Alkohol, Drogen, Medikamenten oder Übermüdung?');
-    setQR(['Ja', 'Nein', 'Unbekannt']);
-    return;
-  }
-
-  // Einfluss (any option)
-  if (S.stage === 'einfluss') {
-    S.data.einfluss = opt;
-    addMsg('user', opt);
-    S.stage = 'geschwindigkeit';
-    renderHeader();
-    const self = S.data.lenker === 'Sie selbst';
-    addMsg('bot', self
-      ? 'Haben Sie die Geschwindigkeit massiv überschritten?'
-      : 'War massiv überhöhte Geschwindigkeit im Spiel?');
-    setQR(['Ja', 'Nein', 'Unbekannt']);
-    return;
-  }
-
-  // Geschwindigkeit (any option)
-  if (S.stage === 'geschwindigkeit') {
-    S.data.geschwindigkeit = opt;
-    addMsg('user', opt);
-    S.stage = 'unfallprotokoll';
-    renderHeader();
-    addMsg('bot', 'Wurde ein Unfallprotokoll erstellt?');
-    setQR(['Ja', 'Nein']);
-    return;
-  }
-
-  // Unfallprotokoll (any option) → Zusammenfassung
-  if (S.stage === 'unfallprotokoll') {
-    S.data.unfallprotokoll = opt;
-    addMsg('user', opt);
-    S.stage = 'summary';
-    renderHeader();
-    addMsg('bot', 'Vielen Dank für Ihre Angaben! Hier ist Ihre Zusammenfassung:');
-    setTimeout(showSummaryCard, 200);
-    setTimeout(() => setQR(['Angaben bestätigen']), 400);
+    const nxt = advanceQR(S.stage);
+    if (nxt === 'summary') {
+      S.stage = 'summary';
+      addMsg('bot', 'Vielen Dank für Ihre Angaben! Hier ist Ihre Zusammenfassung:');
+      setTimeout(showSummaryCard, 200);
+      setTimeout(() => setQR(['Angaben bestätigen']), 400);
+    } else {
+      S.stage = nxt;
+      addMsg('bot', getStageQ(nxt));
+      setQR(getStageQR(nxt));
+    }
     return;
   }
 
@@ -1268,7 +1295,7 @@ function setEnabled(on) {
 // ═══════════════════════════════════════════
 function buildStatusBlock() {
   const d = S.data;
-  return `[STATUS – bereits erfasst: ersterHergang=${d.ersterHergang?'✓':'–'} | datum=${d.datum||'–'} | uhrzeit=${d.uhrzeit||'–'} | schadenortLand=${d.schadenortLand||'–'} | schadenortPlz=${d.schadenortPlz||'–'} | kontrollschild=${d.kontrollschild||'–'} | plz=${d.plz||'–'} | geburtsdatum=${d.geburtsdatum||'–'} | fahrzeug=${d.fahrzeug||'–'}]`;
+  return `[STATUS – bereits erfasst: ersterHergang=${d.ersterHergang?'✓':'–'} | datum=${d.datum||'–'} | uhrzeit=${d.uhrzeit||'–'} | schadenortLand=${d.schadenortLand||'–'} | schadenortPlz=${d.schadenortPlz||'–'} | kontrollschild=${d.kontrollschild||'–'} | plz=${d.plz||'–'} | geburtsdatum=${d.geburtsdatum||'–'} | fahrzeug=${d.fahrzeug||'–'} | lenker=${d.lenker||'–'} | polizeirapport=${d.polizeirapport||'–'} | einfluss=${d.einfluss||'–'} | geschwindigkeit=${d.geschwindigkeit||'–'} | unfallprotokoll=${d.unfallprotokoll||'–'}]`;
 }
 
 async function callClaude(userMsg) {
@@ -1349,8 +1376,14 @@ async function toBot(userMsg) {
 
     // Update collected data from Claude's extraction
     if (r.extracted) {
-      if (r.extracted.ersterHergang) S.data.ersterHergang = r.extracted.ersterHergang;
-      if (r.extracted.datum)         S.data.datum         = r.extracted.datum;
+      if (r.extracted.ersterHergang)   S.data.ersterHergang   = r.extracted.ersterHergang;
+      if (r.extracted.datum)           S.data.datum           = r.extracted.datum;
+      if (r.extracted.uhrzeit)         S.data.uhrzeit         = r.extracted.uhrzeit;
+      if (r.extracted.lenker)          S.data.lenker          = r.extracted.lenker;
+      if (r.extracted.polizeirapport)  S.data.polizeirapport  = r.extracted.polizeirapport;
+      if (r.extracted.einfluss)        S.data.einfluss        = r.extracted.einfluss;
+      if (r.extracted.geschwindigkeit) S.data.geschwindigkeit = r.extracted.geschwindigkeit;
+      if (r.extracted.unfallprotokoll) S.data.unfallprotokoll = r.extracted.unfallprotokoll;
     }
     if (r.identExtracted) {
       if (r.identExtracted.kontrollschild) S.data.kontrollschild = r.identExtracted.kontrollschild.toUpperCase().replace(/\s/g,'');
@@ -1364,6 +1397,28 @@ async function toBot(userMsg) {
     renderHeader();
 
     let next = r.nextStage || S.stage;
+
+    // If next stage is a QR stage already pre-filled from extraction, skip forward
+    if (QR_SEQ.includes(next)) {
+      let i = QR_SEQ.indexOf(next);
+      while (i < QR_SEQ.length && S.data[QR_SEQ[i]]) i++;
+      const effectiveNext = i < QR_SEQ.length ? QR_SEQ[i] : 'summary';
+      if (effectiveNext !== next) {
+        S.stage = effectiveNext;
+        renderHeader();
+        if (effectiveNext === 'summary') {
+          addMsg('bot', 'Vielen Dank für Ihre Angaben! Hier ist Ihre Zusammenfassung:');
+          setTimeout(showSummaryCard, 200);
+          setTimeout(() => setQR(['Angaben bestätigen']), 400);
+        } else {
+          addMsg('bot', getStageQ(effectiveNext));
+          setQR(getStageQR(effectiveNext));
+        }
+        S.loading = false;
+        setEnabled(false);
+        return;
+      }
+    }
 
     // Handle special stages
     if (next === 'summary') {

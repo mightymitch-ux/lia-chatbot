@@ -209,17 +209,18 @@
     /* Geburtsdatum-Eingabe */
     #bday-area { display: none; align-items: center; gap: 8px; margin-bottom: 8px; }
     #bday-area.show { display: flex; }
-    #bday-wrap { position: relative; flex: 1; display: flex; align-items: center; }
     #bday-inp {
       flex: 1; border: 1.5px solid var(--primary); border-radius: var(--rs);
-      padding: 9px 44px 9px 12px; font-size: 15px; outline: none; width: 100%;
+      padding: 9px 12px; font-size: 15px; outline: none;
     }
-    #bday-cal-wrap {
-      position: absolute; right: 10px; width: 28px; height: 28px;
-      display: flex; align-items: center; justify-content: center;
+    /* Kalender-Icon: natives date-Input, nur Icon sichtbar, Text ausgeblendet */
+    #bday-hidden {
+      width: 42px; flex-shrink: 0;
+      border: 1.5px solid var(--primary); border-radius: var(--rs);
+      padding: 8px 4px; background: #fff; cursor: pointer; color: transparent;
     }
-    #bday-cal-wrap span { font-size: 18px; pointer-events: none; }
-    #bday-hidden { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    #bday-hidden::-webkit-datetime-edit { display: none; }
+    #bday-hidden::-webkit-calendar-picker-indicator { margin: 0 auto; cursor: pointer; opacity: 1; }
     #bday-ok {
       background: var(--primary); color: #fff; border: none;
       border-radius: var(--rs); padding: 9px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
@@ -289,13 +290,8 @@
       <button id="dp-ok">OK</button>
     </div>
     <div id="bday-area">
-      <div id="bday-wrap">
-        <input type="text" id="bday-inp" placeholder="TT.MM.JJJJ" maxlength="10" inputmode="numeric" autocomplete="bday">
-        <div id="bday-cal-wrap">
-          <span>📅</span>
-          <input type="date" id="bday-hidden" tabindex="-1">
-        </div>
-      </div>
+      <input type="text" id="bday-inp" placeholder="TT.MM.JJJJ" maxlength="10" inputmode="numeric" autocomplete="bday">
+      <input type="date" id="bday-hidden" tabindex="-1">
       <button id="bday-ok">OK</button>
     </div>
     <div id="gar-area"></div>

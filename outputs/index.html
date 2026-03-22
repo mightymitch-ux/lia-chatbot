@@ -565,6 +565,8 @@ const S = {
   stage:   'init',
   loading: false,
   tts:     false,
+  editMode:  false,
+  editStage: null,
   data: {
     schadenhergang: null,
     datum:          null,
@@ -721,22 +723,23 @@ function scroll() {
 function showSummaryCard() {
   const d = S.data;
   const rows = [
-    ['Schadenhergang', d.schadenhergang],
-    ['Schadendatum',   d.datum],
-    ['Beschädigung',   d.beschaedigung],
-    ['Kontrollschild', d.kontrollschild],
-    ['PLZ',            d.plz],
-    ['Geburtsdatum',   d.geburtsdatum],
+    ['Schadenhergang', d.schadenhergang, 'schadenhergang'],
+    ['Schadendatum',   d.datum,          'datum'],
+    ['Beschädigung',   d.beschaedigung,  'beschaedigung'],
+    ['Kontrollschild', d.kontrollschild, 'kontrollschild'],
+    ['PLZ',            d.plz,            'plz'],
+    ['Geburtsdatum',   d.geburtsdatum,   'geburtsdatum'],
   ].filter(r => r[1]);
 
   const html = `
     <div style="background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08)">
       <div style="background:#00008F;color:#fff;padding:10px 14px;font-weight:600;font-size:14px">Ihre Angaben</div>
       <div style="padding:4px 0">
-        ${rows.map(([label, val]) => `
-          <div style="display:flex;align-items:flex-start;padding:9px 14px;border-bottom:1px solid #f0f0f0;font-size:14px">
-            <span style="color:#999;min-width:115px;flex-shrink:0">${label}</span>
-            <span style="font-weight:500;color:#1a1a1a;word-break:break-word">${esc(val)}</span>
+        ${rows.map(([label, val, key]) => `
+          <div style="display:flex;align-items:center;padding:8px 14px;border-bottom:1px solid #f0f0f0;font-size:14px;gap:8px">
+            <span style="color:#999;min-width:100px;flex-shrink:0">${label}</span>
+            <span style="font-weight:500;color:#1a1a1a;word-break:break-word;flex:1">${esc(val)}</span>
+            <button onclick="editField('${key}')" style="flex-shrink:0;padding:3px 10px;border-radius:20px;border:1.5px solid #00008F;color:#00008F;background:#fff;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap">Anpassen</button>
           </div>`).join('')}
       </div>
     </div>`;
@@ -746,6 +749,36 @@ function showSummaryCard() {
   div.innerHTML = `<div class="bubble" style="padding:0;background:transparent;box-shadow:none">${html}</div>`;
   $chat.appendChild(div);
   scroll();
+}
+
+function editField(key) {
+  clearInputUi();
+  S.editMode = true;
+  S.editStage = key;
+  const cfg = {
+    schadenhergang: { stage: 'schadenhergang', label: 'den Schadenhergang',  type: 'text' },
+    datum:          { stage: 'datum',          label: 'das Schadendatum',    type: 'datum' },
+    beschaedigung:  { stage: 'beschaedigung',  label: 'die Beschädigung',   type: 'dmg' },
+    kontrollschild: { stage: 'kontrollschild', label: 'das Kontrollschild', type: 'text' },
+    plz:            { stage: 'plz',            label: 'Ihre PLZ',           type: 'text' },
+    geburtsdatum:   { stage: 'geburtsdatum',   label: 'Ihr Geburtsdatum',   type: 'bday' },
+  }[key];
+  if (!cfg) return;
+  S.stage = cfg.stage;
+  addMsg('bot', `Bitte geben Sie ${cfg.label} erneut ein.`);
+  if (cfg.type === 'datum') {
+    setQR(['Heute', 'Gestern', 'Genaues Datum']);
+  } else if (cfg.type === 'dmg') {
+    setQR(DMG_OPTS);
+  } else if (cfg.type === 'bday') {
+    $bdayHidden.max = new Date().toISOString().split('T')[0];
+    $bdayHidden.min = '1900-01-01';
+    $bdayArea.classList.add('show');
+    setTimeout(() => $bdayInp.focus(), 50);
+  } else {
+    setEnabled(true);
+    $inp.focus();
+  }
 }
 
 function covCheckSvg() {
@@ -993,6 +1026,33 @@ async function toBot(userMsg) {
   setEnabled(false);
   clearInputUi();
 
+  // Edit mode: update field directly, no Claude call needed
+  if (S.editMode) {
+    const key = S.editStage;
+    switch (key) {
+      case 'schadenhergang':  S.data.schadenhergang = userMsg; break;
+      case 'datum':
+        if (userMsg === 'Heute') S.data.datum = 'heute';
+        else if (userMsg === 'Gestern') S.data.datum = 'gestern';
+        else S.data.datum = userMsg;
+        break;
+      case 'beschaedigung':   S.data.beschaedigung = userMsg; break;
+      case 'kontrollschild':  S.data.kontrollschild = userMsg.toUpperCase().replace(/\s/g, ''); break;
+      case 'plz':             S.data.plz = userMsg; break;
+      case 'geburtsdatum':    S.data.geburtsdatum = userMsg; break;
+    }
+    S.editMode = false;
+    S.editStage = null;
+    S.stage = 'summary';
+    renderHeader();
+    addMsg('bot', 'Danke! Hier sind Ihre aktualisierten Angaben:');
+    setTimeout(showSummaryCard, 200);
+    setTimeout(() => setQR(['Angaben bestätigen']), 500);
+    S.loading = false;
+    setEnabled(true);
+    return;
+  }
+
   showTyping();
   try {
     const r = await callClaude(userMsg);
@@ -1020,6 +1080,11 @@ async function toBot(userMsg) {
     if (next === 'summary') {
       addMsg('bot', r.text);
       setTimeout(showSummaryCard, 200);
+      setTimeout(() => setQR(['Angaben bestätigen']), 400);
+      S.stage = 'summary';
+      S.loading = false;
+      setEnabled(true);
+      return;
     } else if (next === 'coverage') {
       showCoverageMsg(r.text);
       next = 'coverage';

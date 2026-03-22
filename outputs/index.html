@@ -851,6 +851,17 @@ function handleQR(opt) {
     setTimeout(showRepairQuestion, 2800);
     return;
   }
+  // Repair → garages: skip Claude, show garage cards directly
+  if (opt === 'Reparatur gewünscht' && S.stage === 'repair') {
+    S.data.repariert = false;
+    addMsg('user', opt);
+    S.stage = 'garages';
+    addMsg('bot', 'Das System zeigt Ihnen jetzt Partnergaragen in Ihrer Region.');
+    const garageIntro = 'Sie können nun eine der folgenden Partnergaragen für die Reparatur auswählen:';
+    setTimeout(() => addMsg('bot', garageIntro), 400);
+    setTimeout(showGarageCards, 800);
+    return;
+  }
   addMsg('user', opt);
   toBot(opt);
 }

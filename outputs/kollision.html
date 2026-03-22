@@ -199,7 +199,7 @@
     #dp-area.show { display: flex; }
     #dp {
       flex: 1; border: 1.5px solid var(--primary); border-radius: var(--rs);
-      padding: 9px 12px; font-size: 15px; outline: none;
+      padding: 9px 12px; font-size: 15px; font-family: inherit; outline: none;
     }
     #dp-ok {
       background: var(--primary); color: #fff; border: none;
@@ -211,7 +211,7 @@
     #bday-area.show { display: flex; }
     #bday-inp {
       flex: 1; border: 1.5px solid var(--primary); border-radius: var(--rs);
-      padding: 9px 12px; font-size: 15px; outline: none;
+      padding: 9px 12px; font-size: 15px; font-family: inherit; outline: none;
     }
     /* Kalender-Icon: natives date-Input, nur Icon sichtbar, Text ausgeblendet */
     #bday-hidden {
@@ -231,7 +231,7 @@
     #time-area.show { display: flex; }
     #time-inp {
       flex: 1; border: 1.5px solid var(--primary); border-radius: var(--rs);
-      padding: 9px 12px; font-size: 15px; outline: none;
+      padding: 9px 12px; font-size: 15px; font-family: inherit; outline: none;
     }
     #time-ok {
       background: var(--primary); color: #fff; border: none;
@@ -243,7 +243,7 @@
     #land-area.show { display: flex; }
     #land-sel {
       flex: 1; border: 1.5px solid var(--primary); border-radius: var(--rs);
-      padding: 9px 12px; font-size: 15px; outline: none; background: #fff;
+      padding: 9px 12px; font-size: 15px; font-family: inherit; outline: none; background: #fff;
     }
     #land-ok {
       background: var(--primary); color: #fff; border: none;
@@ -392,7 +392,11 @@ const TAG_MAP = {
   schadenortPlz:  'Schadenort',
   kontrollschild: 'Kontrollschild',
   plz:            'PLZ',
-  geburtsdatum:   'Geburtsdatum'
+  geburtsdatum:   'Geburtsdatum',
+  fahrzeug:       'Fahrzeug',
+  wasGeschaedigt: 'Geschädigtes',
+  schadenshergang:'Kollisionsart',
+  hergang:        'Hergang'
 };
 
 const DMG_OPTS = [
@@ -657,7 +661,9 @@ const S = {
     einfluss:        null,
     geschwindigkeit: null,
     unfallprotokoll: null,
-    telefon:         null
+    telefon:         null,
+    garage:          null,
+    repariert:       null
   }
 };
 
@@ -668,8 +674,7 @@ const SYS = `Du bist Lia, die empathische digitale Assistentin für Motorfahrzeu
 
 TONALITÄT:
 - Warm, empathisch, professionell
-- Fasse nach jeder User-Eingabe kurz zusammen, was du verstanden hast – BEVOR du die nächste Frage stellst.
-- Maximal 2–3 kurze Sätze insgesamt (Zusammenfassung + nächste Frage)
+- Maximal 1–2 kurze Sätze pro Antwort – keine Wiederholung der User-Angaben
 - Kein Fachjargon
 
 FAKTEN FÜR DIESEN PROTOTYP (immer verwenden):
@@ -828,7 +833,7 @@ function showSummaryCard() {
           <div style="display:flex;align-items:center;padding:8px 14px;border-bottom:1px solid #f0f0f0;font-size:14px;gap:8px">
             <span style="color:#999;min-width:100px;flex-shrink:0">${label}</span>
             <span style="font-weight:500;color:#1a1a1a;word-break:break-word;flex:1">${esc(val)}</span>
-            <button onclick="editField('${key}')" style="flex-shrink:0;padding:3px 10px;border-radius:20px;border:1.5px solid #00008F;color:#00008F;background:#fff;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap">Anpassen</button>
+            ${key ? `<button onclick="editField('${key}')" style="flex-shrink:0;padding:3px 10px;border-radius:20px;border:1.5px solid #00008F;color:#00008F;background:#fff;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap">Anpassen</button>` : ''}
           </div>`).join('')}
       </div>
     </div>`;
@@ -931,6 +936,51 @@ function showPhoneQuestion() {
   $inp.focus();
 }
 
+function showRepairQuestion() {
+  const repairMsg = 'Wurde Ihr Fahrzeug bereits repariert, oder möchten Sie es reparieren lassen?';
+  addMsg('bot', repairMsg);
+  S.msgs.push({role:'assistant', content: JSON.stringify({
+    text: repairMsg, quickReplies: ['Bereits repariert', 'Reparatur gewünscht'],
+    showDatepicker: false, showTimepicker: false, showLandpicker: false, showFahrzeugpicker: false,
+    extracted: {}, identExtracted: {}, nextStage: 'repair'
+  })});
+  S.stage = 'repair';
+  setQR(['Bereits repariert', 'Reparatur gewünscht']);
+  setEnabled(true);
+  $inp.focus();
+}
+
+function showGarageCards() {
+  const gs = getGarages(S.data.plz);
+  const all = [...gs, { name: 'Selbst organisieren', addr: 'Ich organisiere die Reparatur eigenständig' }];
+  const div = document.createElement('div');
+  div.className = 'msg bot';
+  div.innerHTML = `<div class="bubble" style="padding:12px 14px">
+    <div style="margin-bottom:10px;font-size:15px;line-height:1.5">Sie können nun eine der folgenden Partnergaragen für die Reparatur auswählen:</div>
+    <div class="garage-list"></div>
+  </div>`;
+  const list = div.querySelector('.garage-list');
+  all.forEach(g => {
+    const c = document.createElement('div');
+    c.className = 'garage-card';
+    c.innerHTML = `<div class="g-name">${esc(g.name)}</div><div class="g-addr">${esc(g.addr)}</div>`;
+    c.addEventListener('click', () => pickGarage(g.name, div));
+    list.appendChild(c);
+  });
+  $chat.appendChild(div);
+  scroll();
+}
+
+function pickGarage(name, garageDiv) {
+  S.data.garage = name;
+  if (garageDiv) garageDiv.querySelectorAll('.garage-card').forEach(c => {
+    c.style.pointerEvents = 'none';
+    c.style.opacity = c.querySelector('.g-name').textContent === name ? '1' : '0.4';
+  });
+  addMsg('user', name);
+  toBot(name);
+}
+
 function showCompleteCard() {
   const div = document.createElement('div');
   div.className = 'msg bot';
@@ -985,7 +1035,16 @@ function handleQR(opt) {
     addMsg('user', opt);
     S.stage = 'coverage';
     showCoverageMsg('Sehr gut! Ich habe Ihren Schaden geprüft. Ich freue mich, Ihnen mitteilen zu dürfen, dass Ihr Schaden vollumfänglich gedeckt ist.');
-    setTimeout(showPhoneQuestion, 2800);
+    setTimeout(showRepairQuestion, 2800);
+    return;
+  }
+
+  // Repair → Partnergaragen
+  if (opt === 'Reparatur gewünscht' && S.stage === 'repair') {
+    S.data.repariert = false;
+    addMsg('user', opt);
+    S.stage = 'garages';
+    setTimeout(showGarageCards, 400);
     return;
   }
 
@@ -1297,7 +1356,9 @@ async function toBot(userMsg) {
     } else if (next === 'coverage') {
       showCoverageMsg(r.text);
       next = 'coverage';
-      setTimeout(showPhoneQuestion, 2800);
+      setTimeout(showRepairQuestion, 2800);
+    } else if (next === 'garages') {
+      setTimeout(showGarageCards, 400);
     } else if (next === 'complete') {
       addMsg('bot', r.text);
       setTimeout(showCompleteCard, 600);
@@ -1341,7 +1402,7 @@ async function toBot(userMsg) {
   }
 
   S.loading = false;
-  const noTextInput = ['uhrzeit','schadenortLand','fahrzeug','wasGeschaedigt','schadenshergang','lenker','verantwortung','polizeirapport','einfluss','geschwindigkeit','unfallprotokoll','coverage','complete'];
+  const noTextInput = ['uhrzeit','schadenortLand','fahrzeug','wasGeschaedigt','schadenshergang','lenker','verantwortung','polizeirapport','einfluss','geschwindigkeit','unfallprotokoll','coverage','repair','garages','complete'];
   if (!noTextInput.includes(S.stage)) { setEnabled(true); $inp.focus(); }
 }
 
@@ -1553,6 +1614,7 @@ function buildLog() {
   lines.push(`Geschwindigkeit: ${S.data.geschwindigkeit||'–'}`);
   lines.push(`Unfallprotokoll: ${S.data.unfallprotokoll||'–'}`);
   lines.push(`Telefon:         ${S.data.telefon||'–'}`);
+  lines.push(`Garage:          ${S.data.garage||'–'}`);
   lines.push('', 'Schadennummer: 11.111.111/1111');
   return lines.join('\n');
 }

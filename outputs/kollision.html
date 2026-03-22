@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#00008F">
+  <title>Lia – Kollision</title>
+  <style>
+    :root {
+      --primary: #00008F;
+      --primary-light: #1a1aaa;
+      --bg: #EFEFEF;
+      --white: #FFFFFF;
+      --gray: #F5F5F5;
+      --border: #DEDEDE;
+      --text: #1A1A1A;
+      --muted: #999;
+      --green: #2E7D32;
+      --r: 18px;
+      --rs: 10px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      height: 100%; height: 100dvh;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      overflow: hidden;
+    }
+
+    #app {
+      max-width: 480px;
+      margin: 0 auto;
+      height: 100%; height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* ── HEADER ─────────────────────────────── */
+    #hdr {
+      background: var(--primary);
+      color: #fff;
+      padding: 12px 14px 10px;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+      z-index: 10;
+    }
+    .hdr-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .avatar {
+      width: 40px; height: 40px;
+      background: rgba(255,255,255,.2);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 17px; flex-shrink: 0;
+    }
+    .hdr-info { flex: 1; }
+    .hdr-name { font-weight: 700; font-size: 15px; }
+    .hdr-sub  { font-size: 11px; opacity: .85; }
+    #tts-btn {
+      background: rgba(255,255,255,.15); border: none; border-radius: 50%;
+      width: 34px; height: 34px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; transition: background .2s; flex-shrink: 0; color: #fff;
+    }
+    #tts-btn:hover { background: rgba(255,255,255,.28); }
+    #tts-btn.off   { opacity: .45; }
+
+    .prog-wrap { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .prog-track { flex: 1; height: 4px; background: rgba(255,255,255,.3); border-radius: 2px; overflow: hidden; }
+    .prog-fill  { height: 100%; background: #fff; border-radius: 2px; transition: width .5s ease; width: 0%; }
+    .prog-pct   { font-size: 11px; opacity: .85; min-width: 30px; text-align: right; }
+
+    .tags { display: flex; flex-wrap: wrap; gap: 5px; }
+    .tag {
+      font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 500;
+      background: rgba(255,255,255,.15); color: #fff;
+      border: 1.5px solid rgba(255,255,255,.35); transition: all .3s;
+    }
+    .tag.done { background: #fff; color: var(--primary); border-color: #fff; }
+    .tag.done::before { content: '✓ '; }
+
+    /* ── CHAT ───────────────────────────────── */
+    #chat {
+      flex: 1; overflow-y: auto; overflow-x: hidden;
+      padding: 14px 12px 8px;
+      display: flex; flex-direction: column; gap: 10px;
+      scroll-behavior: smooth;
+    }
+
+    .msg { display: flex; flex-direction: column; max-width: 83%; gap: 3px; }
+    .msg.bot  { align-self: flex-start; }
+    .msg.user { align-self: flex-end; }
+
+    .bubble {
+      padding: 11px 14px; font-size: 15px; line-height: 1.5;
+      border-radius: var(--r); word-break: break-word;
+    }
+    .bot  .bubble { background: #fff; color: var(--text); border-radius: 4px var(--r) var(--r) var(--r); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .user .bubble { background: var(--primary); color: #fff; border-radius: var(--r) 4px var(--r) var(--r); }
+
+    .meta { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+    .bot  .meta { padding-left: 3px; }
+    .user .meta { padding-right: 3px; justify-content: flex-end; }
+    .spk-btn {
+      background: none; border: none; cursor: pointer; font-size: 13px;
+      opacity: .55; padding: 0 2px; transition: opacity .2s;
+    }
+    .spk-btn:hover { opacity: 1; }
+
+    /* Typing */
+    .typing-wrap { display: flex; flex-direction: column; max-width: 83%; align-self: flex-start; }
+    .typing {
+      display: flex; gap: 4px; padding: 13px 16px;
+      background: #fff; border-radius: 4px var(--r) var(--r) var(--r);
+      width: fit-content; box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    }
+    .typing span { width: 7px; height: 7px; background: var(--primary); border-radius: 50%; animation: bounce 1.2s infinite; opacity: .7; }
+    .typing span:nth-child(2) { animation-delay: .2s; }
+    .typing span:nth-child(3) { animation-delay: .4s; }
+    @keyframes bounce { 0%,60%,100%{ transform: translateY(0); } 30%{ transform: translateY(-6px); } }
+
+    /* Coverage card */
+    .cov-card {
+      background: #fff; border-radius: 14px; overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,.10);
+    }
+    .cov-header {
+      background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 60%, #43a047 100%);
+      padding: 18px 16px 14px;
+      text-align: center;
+    }
+    .cov-check-circle {
+      width: 72px; height: 72px; margin: 0 auto 12px;
+      background: #fff; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,.15);
+      animation: popIn .45s cubic-bezier(.175,.885,.32,1.275);
+    }
+    @keyframes popIn { from{ transform:scale(0); opacity:0; } to{ transform:scale(1); opacity:1; } }
+    .cov-check-circle svg { width: 40px; height: 40px; }
+    .cov-header-title { color: #fff; font-size: 17px; font-weight: 700; letter-spacing: .2px; }
+    .cov-header-sub { color: rgba(255,255,255,.85); font-size: 13px; margin-top: 4px; }
+    .cov-body { padding: 14px 16px; }
+    .cov-row {
+      display: flex; align-items: center; gap: 12px;
+      font-size: 14px; font-weight: 500; color: var(--text);
+      padding: 9px 0; border-bottom: 1px solid #f0f0f0;
+    }
+    .cov-row:last-of-type { border-bottom: none; }
+    .cov-ck {
+      width: 26px; height: 26px; border-radius: 50%;
+      background: #e8f5e9; border: 1.5px solid #a5d6a7; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .cov-ck svg { width: 14px; height: 14px; }
+    .cov-car {
+      margin-top: 12px; padding: 10px 12px;
+      background: #f0f4ff; border-radius: 8px;
+      display: flex; align-items: center; gap: 8px;
+      font-size: 14px; font-weight: 600; color: var(--primary);
+    }
+    .cov-car-icon { font-size: 18px; }
+
+    /* Garage cards */
+    .garage-card {
+      background: #fff; border-radius: var(--rs); padding: 12px;
+      border: 1.5px solid var(--border); cursor: pointer;
+      transition: border-color .2s, box-shadow .2s; margin-bottom: 6px;
+    }
+    .garage-card:active, .garage-card:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(56,53,164,.15); }
+    .g-name { font-weight: 600; font-size: 14px; color: var(--text); }
+    .g-addr { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* Complete card */
+    .done-card { background: #fff; border-radius: var(--rs); padding: 18px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .done-emoji { font-size: 42px; animation: pop .4s cubic-bezier(.175,.885,.32,1.275); margin-bottom: 10px; }
+    @keyframes pop { from{ transform: scale(0); opacity: 0; } to{ transform: scale(1); opacity: 1; } }
+    .done-nr { font-size: 17px; font-weight: 700; color: var(--primary); margin: 6px 0; }
+    .done-txt { font-size: 14px; color: #555; line-height: 1.55; }
+
+    /* ── INPUT ──────────────────────────────── */
+    #inp-area {
+      background: #fff; border-top: 1px solid var(--border);
+      padding: 8px 12px 10px; flex-shrink: 0;
+    }
+
+    #qr { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 8px; }
+    #qr:empty { display: none; margin: 0; }
+    .qr {
+      background: #fff; color: var(--primary);
+      border: 1.5px solid var(--primary); border-radius: 20px;
+      padding: 7px 14px; font-size: 14px; font-weight: 500;
+      cursor: pointer; transition: all .15s;
+    }
+    .qr:active, .qr:hover { background: var(--primary); color: #fff; }
+
+    #dp-area { display: none; align-items: center; gap: 8px; margin-bottom: 8px; }
+    #dp-area.show { display: flex; }
+    #dp {
+      flex: 1; border: 1.5px solid var(--primary); border-radius: var(--rs);
+      padding: 9px 12px; font-size: 15px; outline: none;
+    }
+    #dp-ok {
+      background: var(--primary); color: #fff; border: none;
+      border-radius: var(--rs); padding: 9px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+
+    /* Geburtsdatum-Eingabe */
+    #bday-area { display: none; align-items: center; gap: 8px; margin-bottom: 8px; }
+    #bday-area.show { display: flex; }
+    #bday-inp {
+      flex: 1; border: 1.5px solid var(--primary); border-radius: var(--rs);
+      padding: 9px 12px; font-size: 15px; outline: none;
+    }
+    /* Kalender-Icon: natives date-Input, nur Icon sichtbar, Text ausgeblendet */
+    #bday-hidden {
+      width: 42px; flex-shrink: 0;
+      border: 1.5px solid var(--primary); border-radius: var(--rs);
+      padding: 8px 4px; background: #fff; cursor: pointer; color: transparent;
+    }
+    #bday-hidden::-webkit-datetime-edit { display: none; }
+    #bday-hidden::-webkit-calendar-picker-indicator { margin: 0 auto; cursor: pointer; opacity: 1; }
+    #bday-ok {
+      background: var(--primary); color: #fff; border: none;
+      border-radius: var(--rs); padding: 9px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+
+    /* Uhrzeit-Eingabe */
+    #time-area { display: none; align-items: center; gap: 8px; margin-bottom: 8px; }
+    #time-area.show { display: flex; }
+    #time-inp {
+      flex: 1; border: 1.5px solid var(--primary); border-radius: var(--rs);
+      padding: 9px 12px; font-size: 15px; outline: none;
+    }
+    #time-ok {
+      background: var(--primary); color: #fff; border: none;
+      border-radius: var(--rs); padding: 9px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+
+    /* Länder-Auswahl */
+    #land-area { display: none; align-items: center; gap: 8px; margin-bottom: 8px; }
+    #land-area.show { display: flex; }
+    #land-sel {
+      flex: 1; border: 1.5px solid var(--primary); border-radius: var(--rs);
+      padding: 9px 12px; font-size: 15px; outline: none; background: #fff;
+    }
+    #land-ok {
+      background: var(--primary); color: #fff; border: none;
+      border-radius: var(--rs); padding: 9px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+
+    /* Fahrzeug-Auswahl */
+    #fahrzeug-area { display: none; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+    #fahrzeug-area.show { display: flex; }
+    #fahrzeug-manuell-btn {
+      background: #fff; color: var(--primary); border: 1.5px solid var(--primary);
+      border-radius: var(--rs); padding: 9px 16px; font-size: 14px; font-weight: 500; cursor: pointer;
+    }
+    #fahrzeug-manuell-wrap { display: none; align-items: center; gap: 8px; }
+    #fahrzeug-manuell-wrap.show { display: flex; }
+    #fahrzeug-txt {
+      flex: 1; border: 1.5px solid var(--primary); border-radius: var(--rs);
+      padding: 9px 12px; font-size: 15px; outline: none;
+    }
+    #fahrzeug-ok {
+      background: var(--primary); color: #fff; border: none;
+      border-radius: var(--rs); padding: 9px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+
+    #gar-area { display: none; flex-direction: column; margin-bottom: 8px; }
+    #gar-area.show { display: flex; }
+
+    .inp-row { display: flex; gap: 8px; align-items: center; }
+    #msg-inp {
+      flex: 1; background: var(--gray); border: 1.5px solid var(--border);
+      border-radius: 24px; padding: 10px 16px; font-size: 15px; outline: none;
+      transition: border-color .2s, background .2s;
+    }
+    #msg-inp:focus { border-color: var(--primary); background: #fff; }
+    #msg-inp::placeholder { color: var(--muted); }
+    #msg-inp:disabled { opacity: .5; }
+
+    .icon-btn {
+      width: 42px; height: 42px; border-radius: 50%; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      transition: all .15s;
+    }
+    #mic-btn { background: var(--gray); border: 1.5px solid var(--border); font-size: 18px; }
+    #mic-btn.listening { background: #ffebee; border-color: #ef5350; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{ transform: scale(1); } 50%{ transform: scale(1.06); } }
+    #mic-btn:disabled { opacity: .4; cursor: not-allowed; }
+    #snd-btn { background: var(--primary); color: #fff; font-size: 18px; }
+    #snd-btn:hover { background: var(--primary-light); }
+    #snd-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* Summary table */
+    .sum-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .sum-table td { padding: 5px 6px; vertical-align: top; }
+    .sum-table td:first-child { color: var(--muted); width: 45%; }
+    .sum-table td:last-child { font-weight: 500; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <header id="hdr">
+    <div class="hdr-top">
+      <div class="avatar">L</div>
+      <div class="hdr-info">
+        <div class="hdr-name">Lia</div>
+        <div class="hdr-sub">Ihre digitale Assistentin</div>
+      </div>
+      <button id="tts-btn" title="Vorlesen ein/aus">🔊</button>
+    </div>
+    <div class="prog-wrap">
+      <div class="prog-track"><div class="prog-fill" id="prog"></div></div>
+      <span class="prog-pct" id="pct">0%</span>
+    </div>
+    <div class="tags" id="tags"></div>
+  </header>
+
+  <!-- CHAT -->
+  <main id="chat"></main>
+
+  <!-- INPUT -->
+  <footer id="inp-area">
+    <div id="qr"></div>
+    <div id="dp-area">
+      <input type="date" id="dp">
+      <button id="dp-ok">OK</button>
+    </div>
+    <div id="bday-area">
+      <input type="text" id="bday-inp" placeholder="TT.MM.JJJJ" maxlength="10" inputmode="numeric" autocomplete="bday">
+      <input type="date" id="bday-hidden" tabindex="-1">
+      <button id="bday-ok">OK</button>
+    </div>
+    <div id="time-area">
+      <input type="time" id="time-inp">
+      <button id="time-ok">OK</button>
+    </div>
+    <div id="land-area">
+      <select id="land-sel">
+        <option value="Schweiz" selected>🇨🇭 Schweiz</option>
+        <option value="Deutschland">🇩🇪 Deutschland</option>
+        <option value="Österreich">🇦🇹 Österreich</option>
+        <option value="Frankreich">🇫🇷 Frankreich</option>
+        <option value="Italien">🇮🇹 Italien</option>
+        <option value="Liechtenstein">🇱🇮 Liechtenstein</option>
+        <option value="Anderes Land">🌍 Anderes Land</option>
+      </select>
+      <button id="land-ok">OK</button>
+    </div>
+    <div id="fahrzeug-area">
+      <div id="fahrzeug-card-wrap">
+        <div class="garage-card" id="fahrzeug-vorschlag-card">
+          <div class="g-name">🚗 Opel Corsa i30 CW</div>
+          <div class="g-addr">Vorgeschlagenes Fahrzeug</div>
+        </div>
+        <button id="fahrzeug-manuell-btn">Fahrzeug manuell erfassen</button>
+      </div>
+      <div id="fahrzeug-manuell-wrap">
+        <input type="text" id="fahrzeug-txt" placeholder="z.B. VW Golf 2019">
+        <button id="fahrzeug-ok">OK</button>
+      </div>
+    </div>
+    <div id="gar-area"></div>
+    <div class="inp-row">
+      <input type="text" id="msg-inp" placeholder="Ihre Nachricht..." autocomplete="off" spellcheck="false">
+      <button class="icon-btn" id="mic-btn" title="Spracheingabe">🎤</button>
+      <button class="icon-btn" id="snd-btn" title="Senden">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
+    </div>
+  </footer>
+
+</div>
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════
+const WORKER   = 'https://lia-chatbot.mscherrer1983.workers.dev';
+const MODEL    = 'claude-haiku-4-5-20251001';
+const MAX_HIST = 30; // keep last N messages to avoid token overflow
+
+const TAG_MAP = {
+  datum:          'Datum',
+  uhrzeit:        'Uhrzeit',
+  schadenortPlz:  'Schadenort',
+  kontrollschild: 'Kontrollschild',
+  plz:            'PLZ',
+  geburtsdatum:   'Geburtsdatum'
+};
+
+const DMG_OPTS = [
+  'Frontscheibe','Seitenscheibe','Dachscheibe','Heckscheibe',
+  'Scheinwerfer / Nebelscheinwerfer','Seitenspiegel',
+  'Blinkerglas','Rücklichter','Anderes Glas','Mehrere Gläser'
+];
+
+const GARAGES = {
+  // ── Zürich Stadt ──────────────────────────
+  '80': [
+    { name:'Carglass® Zürich-Nord',    addr:'Thurgauerstrasse 40, 8050 Zürich' },
+    { name:'Autoglas Profi AG',        addr:'Hardturmstrasse 3, 8005 Zürich' },
+    { name:'Glass Expert Zürich',      addr:'Albisriederstrasse 110, 8047 Zürich' }
+  ],
+  '81': [
+    { name:'Carglass® Zürich-Süd',     addr:'Seestrasse 89, 8810 Horgen' },
+    { name:'Autoglas Zürichsee',       addr:'Zürichstrasse 20, 8820 Wädenswil' },
+    { name:'Glass Center Horgen',      addr:'Bergstrasse 14, 8810 Horgen' }
+  ],
+  // ── Winterthur ────────────────────────────
+  '84': [
+    { name:'Carglass® Winterthur',     addr:'Zürcherstrasse 204, 8406 Winterthur' },
+    { name:'Autoglas Winterthur AG',   addr:'Industriestrasse 24, 8404 Winterthur' },
+    { name:'Glass Expert Winterthur',  addr:'Oberfeldstrasse 12, 8400 Winterthur' }
+  ],
+  // ── Schaffhausen ──────────────────────────
+  '82': [
+    { name:'Carglass® Schaffhausen',   addr:'Feuerthalen Strasse 2, 8200 Schaffhausen' },
+    { name:'Autoglas Schaffhausen',    addr:'Mühlenstrasse 20, 8200 Schaffhausen' },
+    { name:'Glass Service Klettgau',   addr:'Bahnhofstrasse 10, 8234 Stetten' }
+  ],
+  // ── Frauenfeld / Thurgau ──────────────────
+  '85': [
+    { name:'Carglass® Frauenfeld',     addr:'Zürcherstrasse 120, 8500 Frauenfeld' },
+    { name:'Autoglas Thurgau',         addr:'Industriestrasse 6, 8500 Frauenfeld' },
+    { name:'Glass Expert Weinfelden',  addr:'Konstanzerstrasse 8, 8570 Weinfelden' }
+  ],
+  // ── Rapperswil / Linthgebiet ──────────────
+  '87': [
+    { name:'Carglass® Rapperswil',     addr:'Zürcherstrasse 160, 8640 Rapperswil' },
+    { name:'Autoglas Linth',           addr:'Grynaustrasse 3, 8730 Uznach' },
+    { name:'Glass Center Rapperswil',  addr:'Industriering 10, 8645 Jona' }
+  ],
+  // ── Zürich Oberland / Uster ───────────────
+  '86': [
+    { name:'Carglass® Uster',          addr:'Loren 2, 8610 Uster' },
+    { name:'Autoglas Oberland',        addr:'Zürichstrasse 30, 8620 Wetzikon' },
+    { name:'Glass Expert Illnau',      addr:'Kempttalstrasse 2, 8308 Illnau' }
+  ],
+  // ── Bern Stadt ────────────────────────────
+  '30': [
+    { name:'Carglass® Bern',           addr:'Murtenstrasse 37, 3008 Bern' },
+    { name:'Auto Glas Service AG',     addr:'Güterstrasse 5, 3084 Wabern' },
+    { name:'Autoglas Bern-West',       addr:'Schwarztorstrasse 48, 3007 Bern' }
+  ],
+  '31': [
+    { name:'Carglass® Bern-Nord',      addr:'Viktoriastrasse 70, 3013 Bern' },
+    { name:'Autoglas Bümpliz',         addr:'Könizstrasse 130, 3018 Bern' },
+    { name:'Glass Center Bethlehem',   addr:'Freiburgstrasse 100, 3018 Bern' }
+  ],
+  // ── Thun ──────────────────────────────────
+  '36': [
+    { name:'Carglass® Thun',           addr:'Bernstrasse 54, 3600 Thun' },
+    { name:'Autoglas Thun AG',         addr:'Industriestrasse 10, 3600 Thun' },
+    { name:'Glass Expert Thun',        addr:'Gwattstrasse 15, 3645 Gwatt' }
+  ],
+  // ── Burgdorf / Emmental ───────────────────
+  '34': [
+    { name:'Carglass® Burgdorf',       addr:'Bernstrasse 88, 3400 Burgdorf' },
+    { name:'Autoglas Emmental',        addr:'Lyssachstrasse 20, 3400 Burgdorf' },
+    { name:'Glass Service Langnau',    addr:'Ilfisstrasse 4, 3550 Langnau' }
+  ],
+  // ── Biel / Bienne ─────────────────────────
+  '25': [
+    { name:'Carglass® Biel',           addr:'Murtenstrasse 4, 2503 Biel' },
+    { name:'Autoglas Biel-Bienne',     addr:'Solothurnstrasse 30, 2504 Biel' },
+    { name:'Glass Center Brügg',       addr:'Portstrasse 1, 2555 Brügg' }
+  ],
+  // ── Neuchâtel ─────────────────────────────
+  '20': [
+    { name:'Carglass® Neuchâtel',      addr:'Rue de la Maladière 50, 2000 Neuchâtel' },
+    { name:'Autoverre Neuchâtel',      addr:'Rue des Draizes 4, 2000 Neuchâtel' },
+    { name:'Glass Repair NE',          addr:'Rue de l\'Hôpital 8, 2000 Neuchâtel' }
+  ],
+  // ── Basel Stadt ───────────────────────────
+  '40': [
+    { name:'Carglass® Basel',          addr:'Zürcherstrasse 57, 4052 Basel' },
+    { name:'Basel Autoglas Center',    addr:'Reinacherstrasse 60, 4053 Basel' },
+    { name:'Scheiben Express Basel',   addr:'Binningerstrasse 12, 4123 Allschwil' }
+  ],
+  '41': [
+    { name:'Carglass® Basel-West',     addr:'Muttenzstrasse 2, 4132 Muttenz' },
+    { name:'Autoglas Baselland',       addr:'Hauptstrasse 20, 4144 Arlesheim' },
+    { name:'Glass Expert Reinach',     addr:'Christoph-Merian-Str. 5, 4153 Reinach' }
+  ],
+  // ── Solothurn ─────────────────────────────
+  '45': [
+    { name:'Carglass® Solothurn',      addr:'Westbahnhofstrasse 4, 4500 Solothurn' },
+    { name:'Autoglas Solothurn AG',    addr:'Industriestrasse 18, 4500 Solothurn' },
+    { name:'Glass Service Grenchen',   addr:'Juravorstrasse 8, 2540 Grenchen' }
+  ],
+  // ── Olten ─────────────────────────────────
+  '46': [
+    { name:'Carglass® Olten',          addr:'Baselstrasse 80, 4600 Olten' },
+    { name:'Autoglas Olten',           addr:'Industriestrasse 36, 4600 Olten' },
+    { name:'Glass Expert Zofingen',    addr:'Aarburgerstrasse 10, 4800 Zofingen' }
+  ],
+  // ── Aarau ─────────────────────────────────
+  '50': [
+    { name:'Carglass® Aarau',          addr:'Torfeldstrasse 2, 5000 Aarau' },
+    { name:'Autoglas Aargau AG',       addr:'Industriestrasse 14, 5036 Oberentfelden' },
+    { name:'Glass Expert Aarau',       addr:'Stadtbachstrasse 2, 5000 Aarau' }
+  ],
+  // ── Baden ─────────────────────────────────
+  '53': [
+    { name:'Carglass® Baden',          addr:'Mellingerstrasse 10, 5400 Baden' },
+    { name:'Autoglas Baden AG',        addr:'Zürcherstrasse 44, 5400 Baden' },
+    { name:'Glass Center Wettingen',   addr:'Landstrasse 12, 5430 Wettingen' }
+  ],
+  // ── Luzern Stadt ──────────────────────────
+  '60': [
+    { name:'Carglass® Luzern',         addr:'Industriestrasse 2, 6010 Kriens' },
+    { name:'Autoglas Luzern AG',       addr:'Sternmattstrasse 8, 6005 Luzern' },
+    { name:'Glass Service Emmen',      addr:'Gerliswilstrasse 71, 6020 Emmenbrücke' }
+  ],
+  '61': [
+    { name:'Carglass® Luzern-West',    addr:'Obfelderstrasse 2, 6130 Willisau' },
+    { name:'Autoglas Sursee',          addr:'Unterstadt 14, 6210 Sursee' },
+    { name:'Glass Expert Luzern-Land', addr:'Rotseestrasse 40, 6015 Luzern' }
+  ],
+  // ── Zug ───────────────────────────────────
+  '63': [
+    { name:'Carglass® Zug',            addr:'Baarerstrasse 80, 6300 Zug' },
+    { name:'Autoglas Zug AG',          addr:'Industriestrasse 4, 6300 Zug' },
+    { name:'Glass Expert Baar',        addr:'Zugerstrasse 20, 6340 Baar' }
+  ],
+  // ── Chur / Graubünden ─────────────────────
+  '70': [
+    { name:'Carglass® Chur',           addr:'Ringstrasse 20, 7000 Chur' },
+    { name:'Autoglas Graubünden AG',   addr:'Industriestrasse 34, 7000 Chur' },
+    { name:'Glass Service Chur',       addr:'Masanserstrasse 16, 7000 Chur' }
+  ],
+  // ── St. Gallen Stadt ──────────────────────
+  '90': [
+    { name:'Carglass® St. Gallen',     addr:'Fürstenlandstrasse 33, 9014 St. Gallen' },
+    { name:'Autoglas Ostschweiz AG',   addr:'Zürcher Strasse 200, 9014 St. Gallen' },
+    { name:'Glass Profi St. Gallen',   addr:'Industriestrasse 50, 9015 St. Gallen' }
+  ],
+  // ── Wil / Toggenburg ──────────────────────
+  '95': [
+    { name:'Carglass® Wil',            addr:'Zürcherstrasse 40, 9500 Wil' },
+    { name:'Autoglas Wil AG',          addr:'Bronschhoferstrasse 5, 9500 Wil' },
+    { name:'Glass Center Uzwil',       addr:'Hauptstrasse 8, 9240 Uzwil' }
+  ],
+  // ── Lausanne ──────────────────────────────
+  '10': [
+    { name:'Carglass® Lausanne',       addr:'Av. du Grey 77, 1018 Lausanne' },
+    { name:'Autoverre Romandie',       addr:'Rte de Genève 64, 1004 Lausanne' },
+    { name:'Glass Repair Lausanne',    addr:'Ch. des Entremonts 2, 1008 Prilly' }
+  ],
+  // ── Genève ────────────────────────────────
+  '12': [
+    { name:'Carglass® Genève',         addr:'Rte de Meyrin 100, 1217 Meyrin' },
+    { name:'Autoverre Genève',         addr:'Av. de la Praille 28, 1227 Carouge' },
+    { name:'Glass Expert Genève',      addr:'Rue de Lyon 20, 1201 Genève' }
+  ],
+  // ── Fribourg ──────────────────────────────
+  '17': [
+    { name:'Carglass® Fribourg',       addr:'Rte de Villars 109, 1700 Fribourg' },
+    { name:'Autoverre Fribourg',       addr:'Rte d\'Englisberg 6, 1763 Granges-Paccot' },
+    { name:'Glass Repair Fribourg',    addr:'Rue du Lac 20, 1700 Fribourg' }
+  ],
+  // ── Sion / Valais ─────────────────────────
+  '19': [
+    { name:'Carglass® Sion',           addr:'Rue de l\'Industrie 14, 1950 Sion' },
+    { name:'Autoverre Valais',         addr:'Av. de France 4, 1950 Sion' },
+    { name:'Glass Expert Sierre',      addr:'Rte de Sion 80, 3960 Sierre' }
+  ],
+  // ── 1-stellige Fallbacks ──────────────────
+  '1': [
+    { name:'Carglass® Lausanne',       addr:'Av. du Grey 77, 1018 Lausanne' },
+    { name:'Autoverre Romandie',       addr:'Rte de Genève 64, 1004 Lausanne' },
+    { name:'Glass Repair Service',     addr:'Ch. des Entremonts 2, 1008 Prilly' }
+  ],
+  '2': [
+    { name:'Carglass® Biel',           addr:'Murtenstrasse 4, 2503 Biel' },
+    { name:'Autoglas Mittelland',      addr:'Solothurnstrasse 30, 2504 Biel' },
+    { name:'Glass Center Brügg',       addr:'Brüggstrasse 1, 2555 Brügg' }
+  ],
+  '3': [
+    { name:'Carglass® Bern',           addr:'Murtenstrasse 37, 3008 Bern' },
+    { name:'Auto Glas Service AG',     addr:'Güterstrasse 5, 3084 Wabern' },
+    { name:'Autoglas Bern-West',       addr:'Schwarztorstrasse 48, 3007 Bern' }
+  ],
+  '4': [
+    { name:'Carglass® Basel',          addr:'Zürcherstrasse 57, 4052 Basel' },
+    { name:'Basel Autoglas Center',    addr:'Reinacherstrasse 60, 4053 Basel' },
+    { name:'Scheiben Express',         addr:'Binningerstrasse 12, 4123 Allschwil' }
+  ],
+  '5': [
+    { name:'Carglass® Aarau',          addr:'Torfeldstrasse 2, 5000 Aarau' },
+    { name:'Autoglas Aargau',          addr:'Industriestrasse 14, 5036 Oberentfelden' },
+    { name:'Glass Expert Aarau',       addr:'Stadtbachstrasse 2, 5000 Aarau' }
+  ],
+  '6': [
+    { name:'Carglass® Luzern',         addr:'Industriestrasse 2, 6010 Kriens' },
+    { name:'Autoglas Zentralschweiz',  addr:'Sternmattstrasse 8, 6005 Luzern' },
+    { name:'Glass Service Luzern',     addr:'Gerliswilstrasse 71, 6020 Emmenbrücke' }
+  ],
+  '7': [
+    { name:'Carglass® Chur',           addr:'Ringstrasse 20, 7000 Chur' },
+    { name:'Autoglas Graubünden',      addr:'Industriestrasse 34, 7000 Chur' },
+    { name:'Glass Service Chur',       addr:'Masanserstrasse 16, 7000 Chur' }
+  ],
+  '8': [
+    { name:'Carglass® Zürich',         addr:'Thurgauerstrasse 40, 8050 Zürich' },
+    { name:'Autoglas Profi AG',        addr:'Hardturmstrasse 3, 8005 Zürich' },
+    { name:'Glass Expert Zürich',      addr:'Albisriederstrasse 110, 8047 Zürich' }
+  ],
+  '9': [
+    { name:'Carglass® St. Gallen',     addr:'Fürstenlandstrasse 33, 9014 St. Gallen' },
+    { name:'Autoglas Ostschweiz',      addr:'Zürcher Strasse 200, 9014 St. Gallen' },
+    { name:'Glass Profi AG',           addr:'Industriestrasse 50, 9015 St. Gallen' }
+  ]
+};
+
+function getGarages(plz) {
+  if (!plz) return GARAGES['8'];
+  const p = String(plz).replace(/\D/g, ''); // nur Ziffern
+  if (!p) return GARAGES['8'];
+  return GARAGES[p.substring(0,2)] || GARAGES[p.substring(0,1)] || GARAGES['8'];
+}
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+const S = {
+  msgs:    [],          // Claude messages history [{role,content}]
+  log:     [],          // conversation log for download
+  stage:   'init',
+  loading: false,
+  tts:     false,
+  editMode:  false,
+  editStage: null,
+  data: {
+    ersterHergang:   null,
+    datum:           null,
+    uhrzeit:         null,
+    schadenortLand:  'Schweiz',
+    schadenortPlz:   null,
+    kontrollschild:  null,
+    plz:             null,
+    geburtsdatum:    null,
+    fahrzeug:        null,
+    wasGeschaedigt:  null,
+    schadenshergang: null,
+    hergang:         null,
+    lenker:          null,
+    verantwortung:   null,
+    polizeirapport:  null,
+    einfluss:        null,
+    geschwindigkeit: null,
+    unfallprotokoll: null,
+    telefon:         null
+  }
+};
+
+// ═══════════════════════════════════════════
+// SYSTEM PROMPT
+// ═══════════════════════════════════════════
+const SYS = `Du bist Lia, die empathische digitale Assistentin für Motorfahrzeugschadenmeldungen einer Schweizer Versicherung. Du kommunizierst AUSSCHLIESSLICH auf Deutsch in der Höflichkeitsform (Sie/Ihnen/Ihr/Ihre).
+
+TONALITÄT:
+- Warm, empathisch, professionell
+- Fasse nach jeder User-Eingabe kurz zusammen, was du verstanden hast – BEVOR du die nächste Frage stellst.
+- Maximal 2–3 kurze Sätze insgesamt (Zusammenfassung + nächste Frage)
+- Kein Fachjargon
+
+FAKTEN FÜR DIESEN PROTOTYP (immer verwenden):
+- Fahrzeug: Opel Corsa i30 CW
+- Schaden: immer gedeckt, kein Selbstbehalt, keine Prämienauswirkung
+- Schadennummer: 11.111.111/1111
+
+GESPRÄCHSFLUSS (Kollision – exakt diese Reihenfolge):
+1. ERSTER HERGANG: User beschreibt was passiert ist (Freitext)
+2. DATUM: Wann ist der Schaden passiert? (nur fragen wenn nicht aus Schritt 1 erkennbar)
+   → Quick Replies: ["Heute", "Gestern", "Genaues Datum"]
+   → Bei "Genaues Datum": showDatepicker: true
+3. UHRZEIT: Zu welcher Uhrzeit ereignete sich der Unfall?
+   → showTimepicker: true (kein Freitext)
+4. SCHADENORT LAND: In welchem Land ereignete sich der Schaden?
+   → showLandpicker: true (Schweiz ist vorausgewählt, kein Freitext)
+5. SCHADENORT PLZ: Wie lautet die PLZ oder der Ort des Schadens? (Freitext)
+6. KONTROLLSCHILD: Wie lautet Ihr Kontrollschild? (kein Beispiel nennen)
+7. WOHNORT PLZ: Wie lautet Ihre Wohnort-PLZ? (4-stellig)
+   Wenn der User einen Ortsnamen nennt, erkenne die Schweizer Hauptpostleitzahl.
+8. GEBURTSDATUM: Vollständiges Geburtsdatum → showDatepicker: true
+9. FAHRZEUG: "Das System zeigt Ihnen jetzt das involvierte Fahrzeug zur Auswahl."
+   → nextStage: "fahrzeug", showFahrzeugpicker: true, KEINE Quick Replies
+
+NACH DER FAHRZEUGAUSWAHL (Schritte 10–18 werden automatisch vom System über Quick Replies erfasst):
+- Wenn du eine User-Nachricht für den HERGANG (detaillierte Unfallbeschreibung) erhältst:
+  Fasse kurz zusammen und frage: "Wer lenkte das Fahrzeug zum Zeitpunkt des Unfalls?"
+  → quickReplies: ["Sie selbst", "Eine andere Person"], nextStage: "lenker"
+
+DANACH:
+- Bei nextStage "phone": Frage nach Telefonnummer für allfällige Rückfragen
+- Bei nextStage "complete": Kurzer empathischer Abschlusssatz (OHNE Schadennummer – die zeigt das System)
+
+EXTRAKTION – SEHR WICHTIG:
+Du erhältst vor jeder User-Nachricht einen [STATUS]-Block mit bereits gesammelten Daten.
+- Frage NIE nach Informationen, die im STATUS bereits vorhanden sind (nicht null)
+- Extrahiere aus JEDER User-Nachricht alle erkennbaren Infos
+- Springe direkt zur nächsten FEHLENDEN Information
+
+ANTWORTFORMAT – IMMER NUR VALIDES JSON, KEIN ANDERER TEXT, KEINE MARKDOWN-BLÖCKE:
+{"text":"Nachricht","quickReplies":[],"showDatepicker":false,"showTimepicker":false,"showLandpicker":false,"showFahrzeugpicker":false,"extracted":{"ersterHergang":null,"datum":null},"identExtracted":{"kontrollschild":null,"plz":null,"geburtsdatum":null,"schadenortPlz":null},"nextStage":"ersterHergang"}
+
+WERTE FÜR nextStage: ersterHergang | datum | uhrzeit | schadenortLand | schadenortPlz | kontrollschild | plz | geburtsdatum | fahrzeug | hergang | lenker | summary | coverage | phone | complete`;
+
+// ═══════════════════════════════════════════
+// DOM
+// ═══════════════════════════════════════════
+const $chat   = document.getElementById('chat');
+const $qr     = document.getElementById('qr');
+const $dpArea = document.getElementById('dp-area');
+const $dp     = document.getElementById('dp');
+const $dpOk   = document.getElementById('dp-ok');
+const $bdayArea   = document.getElementById('bday-area');
+const $bdayInp    = document.getElementById('bday-inp');
+const $bdayHidden = document.getElementById('bday-hidden');
+const $bdayOk     = document.getElementById('bday-ok');
+const $garArea= document.getElementById('gar-area');
+const $timeArea = document.getElementById('time-area');
+const $timeInp  = document.getElementById('time-inp');
+const $timeOk   = document.getElementById('time-ok');
+const $landArea = document.getElementById('land-area');
+const $landSel  = document.getElementById('land-sel');
+const $landOk   = document.getElementById('land-ok');
+const $fahrzeugArea = document.getElementById('fahrzeug-area');
+const $inp    = document.getElementById('msg-inp');
+const $mic    = document.getElementById('mic-btn');
+const $snd    = document.getElementById('snd-btn');
+const $ttsBt  = document.getElementById('tts-btn');
+
+
+// ═══════════════════════════════════════════
+// HEADER / PROGRESS
+// ═══════════════════════════════════════════
+function renderHeader() {
+  const keys = Object.keys(TAG_MAP);
+  const done = keys.filter(k => S.data[k]);
+  const pct  = Math.round(done.length / keys.length * 100);
+  document.getElementById('prog').style.width = pct + '%';
+  document.getElementById('pct').textContent  = pct + '%';
+  document.getElementById('tags').innerHTML = keys.map(k =>
+    `<span class="tag${S.data[k] ? ' done' : ''}">${TAG_MAP[k]}</span>`
+  ).join('');
+}
+
+// ═══════════════════════════════════════════
+// CHAT RENDERING
+// ═══════════════════════════════════════════
+function esc(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+function ts() {
+  return new Date().toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'});
+}
+
+function addMsg(role, text, html) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  const t = ts();
+  if (role === 'bot') {
+    div.innerHTML = `
+      <div class="bubble">${html || esc(text)}</div>
+      <div class="meta">
+        <span>${t}</span>
+        <button class="spk-btn" title="Vorlesen" onclick="speak(${JSON.stringify(text)})">🔊</button>
+      </div>`;
+    if (S.tts && text) ttsSpeak(text);
+  } else {
+    div.innerHTML = `<div class="bubble">${esc(text)}</div><div class="meta"><span>${t}</span></div>`;
+  }
+  $chat.appendChild(div);
+  scroll();
+  S.log.push({ role, text, t });
+}
+
+function showTyping() {
+  const w = document.createElement('div');
+  w.id = 'typing';
+  w.className = 'typing-wrap';
+  w.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+  $chat.appendChild(w); scroll();
+}
+function removeTyping() {
+  const el = document.getElementById('typing');
+  if (el) el.remove();
+}
+function scroll() {
+  setTimeout(() => $chat.scrollTo({top: $chat.scrollHeight, behavior:'smooth'}), 50);
+}
+
+// ═══════════════════════════════════════════
+// SPECIAL CARDS
+// ═══════════════════════════════════════════
+function showSummaryCard() {
+  const d = S.data;
+  const rows = [
+    ['Was passiert',    d.ersterHergang,   'ersterHergang'],
+    ['Datum',           d.datum,           'datum'],
+    ['Uhrzeit',         d.uhrzeit,         'uhrzeit'],
+    ['Schadenort Land', d.schadenortLand,  'schadenortLand'],
+    ['Schadenort PLZ',  d.schadenortPlz,   'schadenortPlz'],
+    ['Kontrollschild',  d.kontrollschild,  'kontrollschild'],
+    ['PLZ Wohnort',     d.plz,             'plz'],
+    ['Geburtsdatum',    d.geburtsdatum,    'geburtsdatum'],
+    ['Fahrzeug',        d.fahrzeug,        'fahrzeug'],
+    ['Geschädigtes',    d.wasGeschaedigt,  null],
+    ['Kollisionsart',   d.schadenshergang, null],
+    ['Hergang',         d.hergang,         'hergang'],
+  ].filter(r => r[1]);
+
+  const html = `
+    <div style="background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+      <div style="background:#00008F;color:#fff;padding:10px 14px;font-weight:600;font-size:14px">Ihre Angaben</div>
+      <div style="padding:4px 0">
+        ${rows.map(([label, val, key]) => `
+          <div style="display:flex;align-items:center;padding:8px 14px;border-bottom:1px solid #f0f0f0;font-size:14px;gap:8px">
+            <span style="color:#999;min-width:100px;flex-shrink:0">${label}</span>
+            <span style="font-weight:500;color:#1a1a1a;word-break:break-word;flex:1">${esc(val)}</span>
+            <button onclick="editField('${key}')" style="flex-shrink:0;padding:3px 10px;border-radius:20px;border:1.5px solid #00008F;color:#00008F;background:#fff;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap">Anpassen</button>
+          </div>`).join('')}
+      </div>
+    </div>`;
+
+  const div = document.createElement('div');
+  div.className = 'msg bot';
+  div.innerHTML = `<div class="bubble" style="padding:0;background:transparent;box-shadow:none">${html}</div>`;
+  $chat.appendChild(div);
+  scroll();
+}
+
+function editField(key) {
+  clearInputUi();
+  S.editMode = true;
+  S.editStage = key;
+  const cfg = {
+    ersterHergang:  { stage: 'ersterHergang',  label: 'die Unfallbeschreibung', type: 'text' },
+    datum:          { stage: 'datum',          label: 'das Schadensdatum',       type: 'datum' },
+    uhrzeit:        { stage: 'uhrzeit',        label: 'die Uhrzeit',             type: 'time' },
+    schadenortLand: { stage: 'schadenortLand', label: 'das Schadenort-Land',     type: 'land' },
+    schadenortPlz:  { stage: 'schadenortPlz',  label: 'die Schadenort-PLZ',      type: 'text' },
+    kontrollschild: { stage: 'kontrollschild', label: 'das Kontrollschild',      type: 'text' },
+    plz:            { stage: 'plz',            label: 'Ihre Wohnort-PLZ',        type: 'text' },
+    geburtsdatum:   { stage: 'geburtsdatum',   label: 'Ihr Geburtsdatum',        type: 'bday' },
+    fahrzeug:       { stage: 'fahrzeug',       label: 'das Fahrzeug',            type: 'fahrzeug' },
+    hergang:        { stage: 'hergang',        label: 'den genauen Hergang',     type: 'text' },
+  }[key];
+  if (!cfg) return;
+  S.stage = cfg.stage;
+  addMsg('bot', `Bitte geben Sie ${cfg.label} erneut ein.`);
+  if (cfg.type === 'datum') {
+    setQR(['Heute', 'Gestern', 'Genaues Datum']);
+  } else if (cfg.type === 'bday') {
+    $bdayHidden.max = new Date().toISOString().split('T')[0];
+    $bdayHidden.min = '1900-01-01';
+    $bdayArea.classList.add('show');
+    setTimeout(() => $bdayInp.focus(), 50);
+  } else if (cfg.type === 'time') {
+    $timeArea.classList.add('show');
+    setTimeout(() => $timeInp.focus(), 50);
+  } else if (cfg.type === 'land') {
+    $landArea.classList.add('show');
+  } else if (cfg.type === 'fahrzeug') {
+    $fahrzeugArea.classList.add('show');
+  } else {
+    setEnabled(true);
+    $inp.focus();
+  }
+}
+
+function covCheckSvg() {
+  return `<svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><polyline points="2,7 5.5,10.5 12,3.5" stroke="#2e7d32" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+function covBigCheckSvg() {
+  return `<svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><polyline points="8,22 18,32 36,12" stroke="#2e7d32" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
+function showCoverageMsg(text) {
+  const html = `
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:15px;line-height:1.5">${esc(text)}</div>
+      <div class="cov-card">
+        <div class="cov-header">
+          <div class="cov-check-circle">${covBigCheckSvg()}</div>
+          <div class="cov-header-title">Schaden gedeckt</div>
+          <div class="cov-header-sub">Ihre Versicherung übernimmt die Kosten</div>
+        </div>
+        <div class="cov-body">
+          <div class="cov-row"><div class="cov-ck">${covCheckSvg()}</div> Schaden ist gedeckt</div>
+          <div class="cov-row"><div class="cov-ck">${covCheckSvg()}</div> Kein Selbstbehalt</div>
+          <div class="cov-row"><div class="cov-ck">${covCheckSvg()}</div> Keine Auswirkung auf Ihre Prämie</div>
+          <div class="cov-car"><span class="cov-car-icon">🚗</span> Opel Corsa i30cw</div>
+        </div>
+      </div>
+    </div>`;
+  const t = ts();
+  const div = document.createElement('div');
+  div.className = 'msg bot';
+  div.innerHTML = `
+    <div class="bubble" style="padding:12px 14px">${html}</div>
+    <div class="meta"><span>${t}</span>
+      <button class="spk-btn" onclick="speak(${JSON.stringify(text)})">🔊</button>
+    </div>`;
+  $chat.appendChild(div);
+  scroll();
+  if (S.tts) ttsSpeak(text);
+}
+
+
+function showPhoneQuestion() {
+  const msg = 'Für allfällige Rückfragen – wie lautet Ihre Telefonnummer?';
+  addMsg('bot', msg);
+  S.msgs.push({role:'assistant', content: JSON.stringify({
+    text: msg, quickReplies: [], showDatepicker: false, showTimepicker: false,
+    showLandpicker: false, showFahrzeugpicker: false,
+    extracted: {}, identExtracted: {}, nextStage: 'phone'
+  })});
+  S.stage = 'phone';
+  setEnabled(true);
+  $inp.focus();
+}
+
+function showCompleteCard() {
+  const div = document.createElement('div');
+  div.className = 'msg bot';
+  div.innerHTML = `
+    <div class="bubble" style="padding:0;background:transparent;box-shadow:none">
+      <div class="done-card">
+        <div class="done-emoji">🎉</div>
+        <div style="font-weight:700;font-size:16px;color:var(--primary);margin-bottom:6px">Schadenmeldung erfolgreich!</div>
+        <div class="done-nr">11.111.111/1111</div>
+        <div class="done-txt">Sie erhalten in Kürze eine Bestätigung Ihrer Schadenmeldung und Infos zum weiteren Vorgehen per E-Mail.</div>
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid #eee;font-size:14px;color:#2e7d32;font-weight:600">Alles Gute, Ihre Lia 💚</div>
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid #eee">
+          <div style="font-size:13px;color:#888;margin-bottom:10px">Gesprächsverlauf speichern oder weiterleiten:</div>
+          <div style="display:flex;gap:8px">
+            <button onclick="downloadLog()" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--primary);background:#fff;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer">📄 Herunterladen</button>
+            <button onclick="emailLog()" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--primary);background:#fff;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer">✉️ Per Mail</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  $chat.appendChild(div); scroll();
+  setEnabled(false);
+  if (S.tts) setTimeout(() => ttsSpeak('Alles Gute, Ihre Lia.'), 600);
+}
+
+// ═══════════════════════════════════════════
+// QUICK REPLIES & DATEPICKER
+// ═══════════════════════════════════════════
+function setQR(opts) {
+  $qr.innerHTML = '';
+  if (!opts || !opts.length) return;
+  opts.forEach(o => {
+    const b = document.createElement('button');
+    b.className = 'qr'; b.textContent = o;
+    b.addEventListener('click', () => handleQR(o));
+    $qr.appendChild(b);
+  });
+}
+
+function handleQR(opt) {
+  clearInputUi();
+
+  // Datepicker
+  if (opt === 'Genaues Datum') {
+    $dpArea.classList.add('show');
+    $dp.max = new Date().toISOString().split('T')[0];
+    return;
+  }
+
+  // Summary confirmed → coverage card → phone question
+  if (opt === 'Angaben bestätigen' && S.stage === 'summary') {
+    addMsg('user', opt);
+    S.stage = 'coverage';
+    showCoverageMsg('Sehr gut! Ich habe Ihren Schaden geprüft. Ich freue mich, Ihnen mitteilen zu dürfen, dass Ihr Schaden vollumfänglich gedeckt ist.');
+    setTimeout(showPhoneQuestion, 2800);
+    return;
+  }
+
+  // Was ist zu Schaden gekommen? → hardcoded: Mein Fahrzeug
+  if (opt === 'Mein Fahrzeug' && S.stage === 'wasGeschaedigt') {
+    S.data.wasGeschaedigt = 'Mein Fahrzeug';
+    addMsg('user', opt);
+    S.stage = 'schadenshergang';
+    addMsg('bot', 'Wie ist der Schaden entstanden?');
+    setQR(['Zusammenstoss mit Gegenstand', 'Auffahrunfall', 'Anderer Hergang']);
+    return;
+  }
+
+  // Kollisionsart → hardcoded: Zusammenstoss mit Gegenstand → freier Hergang
+  if (opt === 'Zusammenstoss mit Gegenstand' && S.stage === 'schadenshergang') {
+    S.data.schadenshergang = 'Zusammenstoss mit Gegenstand';
+    addMsg('user', opt);
+    S.stage = 'hergang';
+    addMsg('bot', 'Bitte beschreiben Sie den genauen Unfall- bzw. Schadenhergang.');
+    setEnabled(true);
+    setTimeout(() => $inp.focus(), 50);
+    return;
+  }
+
+  // Lenker → hardcoded: Sie selbst
+  if (opt === 'Sie selbst' && S.stage === 'lenker') {
+    S.data.lenker = 'Sie selbst';
+    addMsg('user', opt);
+    S.stage = 'verantwortung';
+    addMsg('bot', 'Fühlen Sie sich verantwortlich für den Unfall?');
+    setQR(['Ja', 'Nein', 'Teilweise']);
+    return;
+  }
+
+  // Verantwortung → hardcoded: Ja
+  if (opt === 'Ja' && S.stage === 'verantwortung') {
+    S.data.verantwortung = 'Ja';
+    addMsg('user', opt);
+    S.stage = 'polizeirapport';
+    addMsg('bot', 'Wurde ein Polizeirapport erstellt?');
+    setQR(['Ja', 'Nein']);
+    return;
+  }
+
+  // Polizeirapport → hardcoded: Nein
+  if (opt === 'Nein' && S.stage === 'polizeirapport') {
+    S.data.polizeirapport = 'Nein';
+    addMsg('user', opt);
+    S.stage = 'einfluss';
+    addMsg('bot', 'Stand die Lenkerin/der Lenker unter Einfluss von Alkohol, Drogen, Medikamenten oder Übermüdung?');
+    setQR(['Ja', 'Nein', 'Unbekannt']);
+    return;
+  }
+
+  // Einfluss → hardcoded: Nein
+  if (opt === 'Nein' && S.stage === 'einfluss') {
+    S.data.einfluss = 'Nein';
+    addMsg('user', opt);
+    S.stage = 'geschwindigkeit';
+    addMsg('bot', 'War massiv überhöhte Geschwindigkeit im Spiel?');
+    setQR(['Ja', 'Nein', 'Unbekannt']);
+    return;
+  }
+
+  // Geschwindigkeit → hardcoded: Nein
+  if (opt === 'Nein' && S.stage === 'geschwindigkeit') {
+    S.data.geschwindigkeit = 'Nein';
+    addMsg('user', opt);
+    S.stage = 'unfallprotokoll';
+    addMsg('bot', 'Wurde ein Unfallprotokoll erstellt?');
+    setQR(['Ja', 'Nein']);
+    return;
+  }
+
+  // Unfallprotokoll → hardcoded: Nein → direkt zur Zusammenfassung
+  if (opt === 'Nein' && S.stage === 'unfallprotokoll') {
+    S.data.unfallprotokoll = 'Nein';
+    addMsg('user', opt);
+    S.stage = 'summary';
+    renderHeader();
+    addMsg('bot', 'Vielen Dank! Hier sind Ihre Angaben zur Überprüfung:');
+    setTimeout(showSummaryCard, 200);
+    setTimeout(() => setQR(['Angaben bestätigen']), 400);
+    return;
+  }
+
+  addMsg('user', opt);
+  toBot(opt);
+}
+
+$dpOk.addEventListener('click', () => {
+  if (!$dp.value) return;
+  const d = new Date($dp.value);
+  const fmt = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+  $dpArea.classList.remove('show');
+  addMsg('user', fmt);
+  toBot(fmt);
+});
+
+// Uhrzeit
+$timeOk.addEventListener('click', () => {
+  if (!$timeInp.value) return;
+  const parts = $timeInp.value.split(':');
+  const fmt = `${parts[0]}:${parts[1]} Uhr`;
+  $timeArea.classList.remove('show');
+  addMsg('user', fmt);
+  toBot(fmt);
+});
+
+// Länder-Dropdown: bypass – kein Claude-Call
+$landOk.addEventListener('click', () => {
+  const v = $landSel.value;
+  S.data.schadenortLand = v;
+  clearInputUi();
+  renderHeader();
+  addMsg('user', v);
+  S.stage = 'schadenortPlz';
+  addMsg('bot', 'Wie lautet die PLZ oder der Ort des Schadens?');
+  setEnabled(true);
+  setTimeout(() => $inp.focus(), 50);
+});
+
+// Fahrzeugauswahl
+function selectFahrzeug(name) {
+  S.data.fahrzeug = name;
+  clearInputUi();
+  renderHeader();
+  addMsg('user', name);
+  S.stage = 'wasGeschaedigt';
+  addMsg('bot', 'Was ist zu Schaden gekommen?');
+  setQR(['Mein Fahrzeug', 'Ein anderes Fahrzeug', 'Person', 'Andere Objekte oder Gegenstände']);
+  setEnabled(false);
+}
+document.getElementById('fahrzeug-vorschlag-card').addEventListener('click', () => {
+  selectFahrzeug('Opel Corsa i30 CW');
+});
+document.getElementById('fahrzeug-manuell-btn').addEventListener('click', () => {
+  document.getElementById('fahrzeug-card-wrap').style.display = 'none';
+  document.getElementById('fahrzeug-manuell-wrap').classList.add('show');
+  setTimeout(() => document.getElementById('fahrzeug-txt').focus(), 50);
+});
+document.getElementById('fahrzeug-ok').addEventListener('click', () => {
+  const v = document.getElementById('fahrzeug-txt').value.trim();
+  if (!v) return;
+  selectFahrzeug(v);
+});
+document.getElementById('fahrzeug-txt').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const v = document.getElementById('fahrzeug-txt').value.trim();
+    if (v) selectFahrzeug(v);
+  }
+});
+
+// Geburtsdatum: Auto-Format TT.MM.JJJJ beim Tippen
+$bdayInp.addEventListener('input', () => {
+  let v = $bdayInp.value.replace(/\D/g, '');
+  if (v.length > 2) v = v.substring(0, 2) + '.' + v.substring(2);
+  if (v.length > 5) v = v.substring(0, 5) + '.' + v.substring(5);
+  $bdayInp.value = v.substring(0, 10);
+});
+$bdayInp.addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitBday();
+});
+// Kalender-Icon → native Picker über hidden input
+$bdayHidden.addEventListener('change', () => {
+  if (!$bdayHidden.value) return;
+  const d = new Date($bdayHidden.value);
+  $bdayInp.value = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+});
+$bdayOk.addEventListener('click', submitBday);
+function submitBday() {
+  const v = $bdayInp.value.trim();
+  if (!/^\d{2}\.\d{2}\.\d{4}$/.test(v)) { $bdayInp.focus(); return; }
+  $bdayArea.classList.remove('show');
+  $bdayInp.value = '';
+  addMsg('user', v);
+  toBot(v);
+}
+
+function clearInputUi() {
+  $qr.innerHTML = '';
+  $dpArea.classList.remove('show');
+  $bdayArea.classList.remove('show');
+  $bdayInp.value = '';
+  $timeArea.classList.remove('show');
+  $landArea.classList.remove('show');
+  $fahrzeugArea.classList.remove('show');
+  $garArea.classList.remove('show');
+  $garArea.innerHTML = '';
+}
+
+function setEnabled(on) {
+  $inp.disabled = !on;
+  $snd.disabled = !on;
+  $mic.disabled = !on;
+}
+
+// ═══════════════════════════════════════════
+// CLAUDE API
+// ═══════════════════════════════════════════
+function buildStatusBlock() {
+  const d = S.data;
+  return `[STATUS – bereits erfasst: ersterHergang=${d.ersterHergang?'✓':'–'} | datum=${d.datum||'–'} | uhrzeit=${d.uhrzeit||'–'} | schadenortLand=${d.schadenortLand||'–'} | schadenortPlz=${d.schadenortPlz||'–'} | kontrollschild=${d.kontrollschild||'–'} | plz=${d.plz||'–'} | geburtsdatum=${d.geburtsdatum||'–'} | fahrzeug=${d.fahrzeug||'–'}]`;
+}
+
+async function callClaude(userMsg) {
+  // Inject current data state so Claude knows what to skip
+  const msgWithCtx = buildStatusBlock() + '\n' + userMsg;
+  S.msgs.push({role:'user', content: msgWithCtx});
+  // Keep history bounded
+  const hist = S.msgs.slice(-MAX_HIST);
+
+  const body = { model: MODEL, max_tokens: 1024, system: SYS, messages: hist };
+  const res = await fetch(WORKER, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message || 'API error');
+
+  const raw = data.content?.[0]?.text || '';
+  S.msgs.push({role:'assistant', content: raw});
+
+  // Parse JSON (strip markdown fences if present)
+  try {
+    const clean = raw.replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+    return JSON.parse(clean);
+  } catch(e) {
+    console.warn('JSON parse fail:', raw);
+    return { text: raw, quickReplies: [], showDatepicker: false, extracted: {}, identExtracted: {}, nextStage: S.stage };
+  }
+}
+
+// ═══════════════════════════════════════════
+// MAIN HANDLER
+// ═══════════════════════════════════════════
+async function toBot(userMsg) {
+  if (S.loading) return;
+  S.loading = true;
+  setEnabled(false);
+  clearInputUi();
+
+  // Edit mode: update field directly, no Claude call needed
+  if (S.editMode) {
+    const key = S.editStage;
+    switch (key) {
+      case 'ersterHergang':   S.data.ersterHergang = userMsg; break;
+      case 'datum':
+        if (userMsg === 'Heute') S.data.datum = 'heute';
+        else if (userMsg === 'Gestern') S.data.datum = 'gestern';
+        else S.data.datum = userMsg;
+        break;
+      case 'uhrzeit':         S.data.uhrzeit = userMsg; break;
+      case 'schadenortLand':  S.data.schadenortLand = userMsg; break;
+      case 'schadenortPlz':   S.data.schadenortPlz = userMsg; break;
+      case 'kontrollschild':  S.data.kontrollschild = userMsg.toUpperCase().replace(/\s/g, ''); break;
+      case 'plz':             S.data.plz = userMsg; break;
+      case 'geburtsdatum':    S.data.geburtsdatum = userMsg; break;
+      case 'fahrzeug':        S.data.fahrzeug = userMsg; break;
+      case 'hergang':         S.data.hergang = userMsg; break;
+    }
+    S.editMode = false;
+    S.editStage = null;
+    S.stage = 'summary';
+    renderHeader();
+    addMsg('bot', 'Danke! Hier sind Ihre aktualisierten Angaben:');
+    setTimeout(showSummaryCard, 200);
+    setTimeout(() => setQR(['Angaben bestätigen']), 500);
+    S.loading = false;
+    setEnabled(true);
+    return;
+  }
+
+  showTyping();
+  try {
+    const r = await callClaude(userMsg);
+    removeTyping();
+
+    // Update collected data from Claude's extraction
+    if (r.extracted) {
+      if (r.extracted.ersterHergang) S.data.ersterHergang = r.extracted.ersterHergang;
+      if (r.extracted.datum)         S.data.datum         = r.extracted.datum;
+    }
+    if (r.identExtracted) {
+      if (r.identExtracted.kontrollschild) S.data.kontrollschild = r.identExtracted.kontrollschild.toUpperCase().replace(/\s/g,'');
+      if (r.identExtracted.plz)            S.data.plz            = r.identExtracted.plz;
+      if (r.identExtracted.geburtsdatum)   S.data.geburtsdatum   = r.identExtracted.geburtsdatum;
+      if (r.identExtracted.schadenortPlz)  S.data.schadenortPlz  = r.identExtracted.schadenortPlz;
+    }
+
+    // Fallback direct extraction based on stage
+    extractDirect(userMsg);
+    renderHeader();
+
+    let next = r.nextStage || S.stage;
+
+    // Handle special stages
+    if (next === 'summary') {
+      addMsg('bot', r.text);
+      setTimeout(showSummaryCard, 200);
+      setTimeout(() => setQR(['Angaben bestätigen']), 400);
+      S.stage = 'summary';
+      S.loading = false;
+      setEnabled(true);
+      return;
+    } else if (next === 'coverage') {
+      showCoverageMsg(r.text);
+      next = 'coverage';
+      setTimeout(showPhoneQuestion, 2800);
+    } else if (next === 'complete') {
+      addMsg('bot', r.text);
+      setTimeout(showCompleteCard, 600);
+      S.stage = 'complete';
+      S.loading = false;
+      return;
+    } else {
+      addMsg('bot', r.text);
+    }
+
+    // Show appropriate input UI based on next stage or Claude flags
+    if (next === 'uhrzeit') {
+      $timeArea.classList.add('show');
+      setTimeout(() => $timeInp.focus(), 50);
+    } else if (next === 'schadenortLand') {
+      $landArea.classList.add('show');
+    } else if (next === 'fahrzeug') {
+      $fahrzeugArea.classList.add('show');
+    } else if (r.showDatepicker) {
+      if (next === 'geburtsdatum') {
+        $bdayHidden.max = new Date().toISOString().split('T')[0];
+        $bdayHidden.min = '1900-01-01';
+        $bdayArea.classList.add('show');
+        setTimeout(() => $bdayInp.focus(), 50);
+      } else {
+        $dpArea.classList.add('show');
+        const today = new Date().toISOString().split('T')[0];
+        $dp.max = today;
+        $dp.min = '';
+      }
+    } else if (r.quickReplies && r.quickReplies.length) {
+      setQR(r.quickReplies);
+    }
+
+    S.stage = next;
+
+  } catch(err) {
+    removeTyping();
+    console.error(err);
+    addMsg('bot', 'Entschuldigung, es ist ein technischer Fehler aufgetreten. Bitte versuchen Sie es erneut.');
+  }
+
+  S.loading = false;
+  const noTextInput = ['uhrzeit','schadenortLand','fahrzeug','wasGeschaedigt','schadenshergang','lenker','verantwortung','polizeirapport','einfluss','geschwindigkeit','unfallprotokoll','coverage','complete'];
+  if (!noTextInput.includes(S.stage)) { setEnabled(true); $inp.focus(); }
+}
+
+// ═══════════════════════════════════════════
+// DIRECT EXTRACTION (fallback)
+// ═══════════════════════════════════════════
+function extractDirect(msg) {
+  const st = S.stage;
+  if ((st === 'ersterHergang' || st === 'init') && !S.data.ersterHergang && msg.length > 2)
+    S.data.ersterHergang = msg;
+  if (st === 'datum' || msg === 'Heute' || msg === 'Gestern') {
+    if (!S.data.datum) {
+      if (msg === 'Heute') S.data.datum = 'heute';
+      else if (msg === 'Gestern') S.data.datum = 'gestern';
+      else if (/\d{2}\.\d{2}\.\d{4}/.test(msg)) S.data.datum = msg;
+    }
+  }
+  if (st === 'uhrzeit' && !S.data.uhrzeit && msg.includes(':')) S.data.uhrzeit = msg;
+  if (st === 'schadenortPlz' && !S.data.schadenortPlz) S.data.schadenortPlz = msg;
+  if (st === 'kontrollschild' && !S.data.kontrollschild && /^[A-Z]{2}\d{2,6}$/i.test(msg.replace(/\s/g,'')))
+    S.data.kontrollschild = msg.toUpperCase().replace(/\s/g,'');
+  if (st === 'plz' && !S.data.plz && /^\d{4}$/.test(msg.trim()))
+    S.data.plz = msg.trim();
+  if (st === 'geburtsdatum' && !S.data.geburtsdatum && /\d{2}\.\d{2}\.\d{4}/.test(msg))
+    S.data.geburtsdatum = msg;
+  if (st === 'hergang' && !S.data.hergang && msg.length > 2) S.data.hergang = msg;
+  if (st === 'phone' && !S.data.telefon && msg.length >= 7) S.data.telefon = msg;
+}
+
+// ═══════════════════════════════════════════
+// SEND TEXT
+// ═══════════════════════════════════════════
+function handleSend() {
+  const v = $inp.value.trim();
+  if (!v || S.loading) return;
+  $inp.value = '';
+  clearInputUi();
+  addMsg('user', v);
+  toBot(v);
+}
+$snd.addEventListener('click', handleSend);
+$inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }});
+
+// ═══════════════════════════════════════════
+// TTS
+// ═══════════════════════════════════════════
+const synth = window.speechSynthesis;
+window.speak = ttsSpeak;
+let ttsVoice = null;
+
+function loadVoices() {
+  const vs = synth.getVoices();
+  if (!vs.length) return;
+  ttsVoice = vs.find(v => v.lang.startsWith('de') && /female|anna|sara|steffi|helena/i.test(v.name))
+          || vs.find(v => v.lang.startsWith('de'))
+          || null;
+}
+loadVoices();
+if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices;
+
+function formatForTTS(text) {
+  // Kontrollschild-Muster (z.B. ZH12345) → "ZH 1 2 3 4 5"
+  return text.replace(/\b([A-Za-z]{2})(\d{2,6})\b/g, (_, letters, digits) => {
+    return letters.toUpperCase() + ' ' + digits.split('').join(' ');
+  });
+}
+
+function ttsSpeak(text) {
+  if (!S.tts || !synth) return;
+  synth.cancel();
+  // 50ms Delay nach cancel() – iOS verwirft sonst den speak()-Aufruf
+  setTimeout(() => {
+    const u = new SpeechSynthesisUtterance(formatForTTS(text));
+    u.lang = 'de-CH'; u.rate = 1.0; u.pitch = 1.1;
+    u.voice = ttsVoice;
+    synth.speak(u);
+  }, 50);
+}
+
+// TTS-Button: initial auf "aus" setzen (S.tts startet als false)
+$ttsBt.classList.add('off');
+$ttsBt.textContent = '🔇';
+
+$ttsBt.addEventListener('click', () => {
+  S.tts = !S.tts;
+  $ttsBt.classList.toggle('off', !S.tts);
+  $ttsBt.textContent = S.tts ? '🔊' : '🔇';
+  if (S.tts) {
+    // Audio-Kontext auf iOS/Android innerhalb der User-Geste entsperren
+    const unlock = new SpeechSynthesisUtterance('');
+    unlock.volume = 0;
+    synth.speak(unlock);
+  } else {
+    synth.cancel();
+  }
+});
+
+// ═══════════════════════════════════════════
+// STT
+// ═══════════════════════════════════════════
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, listening = false, lastTranscript = '';
+
+// Mic-Button ausblenden wenn STT nicht unterstützt
+if (!SR) $mic.style.display = 'none';
+
+function buildRec() {
+  const r = new SR();
+  r.lang = 'de-DE';
+  r.continuous = false;
+  r.interimResults = true;
+  r.maxAlternatives = 1;
+
+  r.onresult = e => {
+    // Ab resultIndex akkumulieren (korrekte Mobile-Methode)
+    let final = '', interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    const text = final || interim;
+    if (text) { lastTranscript = text; $inp.value = text; }
+  };
+
+  r.onend = () => {
+    const wasListening = listening;
+    listening = false;
+    rec = null;
+    $mic.classList.remove('listening');
+    if (wasListening && lastTranscript.trim()) {
+      const msg = lastTranscript.trim();
+      lastTranscript = '';
+      $inp.value = '';
+      setTimeout(() => { clearInputUi(); addMsg('user', msg); toBot(msg); }, 300);
+    }
+  };
+
+  r.onerror = e => {
+    listening = false;
+    rec = null;
+    $mic.classList.remove('listening');
+    if (e.error === 'not-allowed') {
+      alert('Bitte erlauben Sie den Mikrofonzugriff in den Browser-Einstellungen.');
+    }
+    // 'no-speech', 'aborted' → kein Alert nötig
+  };
+
+  r.onnomatch = () => {
+    lastTranscript = '';
+    $inp.value = '';
+  };
+
+  return r;
+}
+
+function startListen() {
+  if (!SR || S.loading) return;
+  synth.cancel();
+  lastTranscript = '';
+  $inp.value = '';
+  rec = buildRec();        // Neue Instanz pro Aufnahme (Mobile-Pflicht)
+  listening = true;
+  $mic.classList.add('listening');
+  try { rec.start(); } catch(e) {
+    listening = false;
+    rec = null;
+    $mic.classList.remove('listening');
+  }
+}
+
+function stopListen() {
+  listening = false;
+  $mic.classList.remove('listening');
+  if (rec) { try { rec.stop(); } catch(e) {} }
+}
+
+$mic.addEventListener('click', () => {
+  listening ? stopListen() : startListen();
+});
+
+// ═══════════════════════════════════════════
+// DOWNLOAD / MAIL
+// ═══════════════════════════════════════════
+function buildLog() {
+  const lines = [
+    '=== LIA – Schadenmeldung Kollision ===',
+    `Datum: ${new Date().toLocaleDateString('de-CH')}`,
+    '',
+    '=== Gesprächsverlauf ==='
+  ];
+  S.log.forEach(m => lines.push(`[${m.t}] ${m.role==='bot'?'Lia':'Sie'}: ${m.text}`));
+  lines.push('', '=== Erfasste Daten ===');
+  lines.push(`Was passiert:    ${S.data.ersterHergang||'–'}`);
+  lines.push(`Datum:           ${S.data.datum||'–'}`);
+  lines.push(`Uhrzeit:         ${S.data.uhrzeit||'–'}`);
+  lines.push(`Schadenort Land: ${S.data.schadenortLand||'–'}`);
+  lines.push(`Schadenort PLZ:  ${S.data.schadenortPlz||'–'}`);
+  lines.push(`Kontrollschild:  ${S.data.kontrollschild||'–'}`);
+  lines.push(`PLZ Wohnort:     ${S.data.plz||'–'}`);
+  lines.push(`Geburtsdatum:    ${S.data.geburtsdatum||'–'}`);
+  lines.push(`Fahrzeug:        ${S.data.fahrzeug||'–'}`);
+  lines.push(`Geschädigtes:    ${S.data.wasGeschaedigt||'–'}`);
+  lines.push(`Kollisionsart:   ${S.data.schadenshergang||'–'}`);
+  lines.push(`Hergang:         ${S.data.hergang||'–'}`);
+  lines.push(`Lenker:          ${S.data.lenker||'–'}`);
+  lines.push(`Verantwortung:   ${S.data.verantwortung||'–'}`);
+  lines.push(`Polizeirapport:  ${S.data.polizeirapport||'–'}`);
+  lines.push(`Einfluss:        ${S.data.einfluss||'–'}`);
+  lines.push(`Geschwindigkeit: ${S.data.geschwindigkeit||'–'}`);
+  lines.push(`Unfallprotokoll: ${S.data.unfallprotokoll||'–'}`);
+  lines.push(`Telefon:         ${S.data.telefon||'–'}`);
+  lines.push('', 'Schadennummer: 11.111.111/1111');
+  return lines.join('\n');
+}
+function downloadLog() {
+  const b = new Blob([buildLog()],{type:'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(b);
+  a.download = `Schadenmeldung_Kollision_${new Date().toISOString().slice(0,10)}.txt`;
+  a.click();
+}
+function emailLog() {
+  const t = buildLog();
+  window.location.href = `mailto:?subject=${encodeURIComponent('Schadenmeldung 11.111.111/1111')}&body=${encodeURIComponent(t)}`;
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+async function init() {
+  renderHeader();
+  setEnabled(false);
+
+  await new Promise(r => setTimeout(r, 400));
+
+  const greeting = 'Hallo. Ich bin Lia, Ihre digitale Assistentin. Ich helfe Ihnen, Ihren Kollisionsschaden schnell und einfach zu erfassen. Bitte schildern Sie mir kurz, was passiert ist.';
+  addMsg('bot', greeting);
+
+  // Seed conversation so Claude knows the context
+  S.msgs.push({
+    role: 'assistant',
+    content: JSON.stringify({
+      text: greeting, quickReplies: [], showDatepicker: false,
+      showTimepicker: false, showLandpicker: false, showFahrzeugpicker: false,
+      extracted: { ersterHergang: null, datum: null },
+      identExtracted: { kontrollschild: null, plz: null, geburtsdatum: null, schadenortPlz: null },
+      nextStage: 'ersterHergang'
+    })
+  });
+
+  S.stage = 'ersterHergang';
+  setEnabled(true);
+  $inp.focus();
+}
+
+init();
+</script>
+</body>
+</html>

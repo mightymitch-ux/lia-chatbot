@@ -822,26 +822,32 @@ function showCoverageMsg(text) {
 
 function showGarageCards() {
   const gs = getGarages(S.data.plz);
-  $garArea.innerHTML = '';
-  gs.forEach(g => {
+  const all = [...gs, { name: 'Selbst organisieren', addr: 'Ich organisiere die Reparatur eigenständig' }];
+  const div = document.createElement('div');
+  div.className = 'msg bot';
+  div.innerHTML = `<div class="bubble" style="padding:12px 14px">
+    <div style="margin-bottom:10px;font-size:15px;line-height:1.5">Sie können nun eine der folgenden Partnergaragen für die Reparatur auswählen:</div>
+    <div class="garage-list"></div>
+  </div>`;
+  const list = div.querySelector('.garage-list');
+  all.forEach(g => {
     const c = document.createElement('div');
     c.className = 'garage-card';
     c.innerHTML = `<div class="g-name">${esc(g.name)}</div><div class="g-addr">${esc(g.addr)}</div>`;
-    c.addEventListener('click', () => pickGarage(g.name));
-    $garArea.appendChild(c);
+    c.addEventListener('click', () => pickGarage(g.name, div));
+    list.appendChild(c);
   });
-  const self = document.createElement('div');
-  self.className = 'garage-card';
-  self.innerHTML = '<div class="g-name">Selbst organisieren</div><div class="g-addr">Ich organisiere die Reparatur eigenständig</div>';
-  self.addEventListener('click', () => pickGarage('Selbst organisieren'));
-  $garArea.appendChild(self);
-  $garArea.classList.add('show');
+  $chat.appendChild(div);
+  scroll();
 }
 
-function pickGarage(name) {
+function pickGarage(name, garageDiv) {
   S.data.garage = name;
-  $garArea.classList.remove('show');
-  $garArea.innerHTML = '';
+  // Karten nach Auswahl deaktivieren
+  if (garageDiv) garageDiv.querySelectorAll('.garage-card').forEach(c => {
+    c.style.pointerEvents = 'none';
+    c.style.opacity = c.querySelector('.g-name').textContent === name ? '1' : '0.4';
+  });
   addMsg('user', name);
   toBot(name);
 }
@@ -918,10 +924,7 @@ function handleQR(opt) {
     S.data.repariert = false;
     addMsg('user', opt);
     S.stage = 'garages';
-    addMsg('bot', 'Das System zeigt Ihnen jetzt Partnergaragen in Ihrer Region.');
-    const garageIntro = 'Sie können nun eine der folgenden Partnergaragen für die Reparatur auswählen:';
-    setTimeout(() => addMsg('bot', garageIntro), 400);
-    setTimeout(showGarageCards, 800);
+    setTimeout(showGarageCards, 400);
     return;
   }
   addMsg('user', opt);
@@ -1090,10 +1093,7 @@ async function toBot(userMsg) {
       next = 'coverage';
       setTimeout(showRepairQuestion, 2800);
     } else if (next === 'garages') {
-      addMsg('bot', r.text);
-      const garageIntro = 'Sie können nun eine der folgenden Partnergaragen für die Reparatur auswählen:';
-      setTimeout(() => addMsg('bot', garageIntro), 400);
-      setTimeout(showGarageCards, 800);
+      setTimeout(showGarageCards, 400);
     } else if (next === 'complete') {
       addMsg('bot', r.text);
       setTimeout(showCompleteCard, 600);

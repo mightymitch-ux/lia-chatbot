@@ -396,7 +396,13 @@ const TAG_MAP = {
   fahrzeug:       'Fahrzeug',
   wasGeschaedigt: 'Geschädigtes',
   schadenshergang:'Kollisionsart',
-  hergang:        'Hergang'
+  hergang:        'Hergang',
+  lenker:         'Lenker:in',
+  verantwortung:  'Verantwortung',
+  polizeirapport: 'Polizeirapport',
+  einfluss:       'Einfluss',
+  geschwindigkeit:'Geschwindigkeit',
+  unfallprotokoll:'Unfallprotokoll'
 };
 
 const DMG_OPTS = [
@@ -674,7 +680,9 @@ const SYS = `Du bist Lia, die empathische digitale Assistentin für Motorfahrzeu
 
 TONALITÄT:
 - Warm, empathisch, professionell
-- Maximal 1–2 kurze Sätze pro Antwort – keine Wiederholung der User-Angaben
+- Starte JEDE Antwort mit einem kurzen Bestätigungswort: "Ok.", "Verstanden.", "Danke!", "Tiptop.", "Merci.", "Super.", "Alles klar.", "Danke für die Angabe." oder ähnlichem
+- Maximal 1–2 kurze Sätze (Bestätigung + nächste Frage)
+- Keine Wiederholung der User-Angaben
 - Kein Fachjargon
 
 FAKTEN FÜR DIESEN PROTOTYP (immer verwenden):
@@ -696,7 +704,7 @@ GESPRÄCHSFLUSS (Kollision – exakt diese Reihenfolge):
 7. WOHNORT PLZ: Wie lautet Ihre Wohnort-PLZ? (4-stellig)
    Wenn der User einen Ortsnamen nennt, erkenne die Schweizer Hauptpostleitzahl.
 8. GEBURTSDATUM: Vollständiges Geburtsdatum → showDatepicker: true
-9. FAHRZEUG: "Das System zeigt Ihnen jetzt das involvierte Fahrzeug zur Auswahl."
+9. FAHRZEUG: "Stimmen die Angaben zu Ihrem Fahrzeug?"
    → nextStage: "fahrzeug", showFahrzeugpicker: true, KEINE Quick Replies
 
 NACH DER FAHRZEUGAUSWAHL (Schritte 10–18 werden automatisch vom System über Quick Replies erfasst):
@@ -1053,6 +1061,7 @@ function handleQR(opt) {
     S.data.wasGeschaedigt = 'Mein Fahrzeug';
     addMsg('user', opt);
     S.stage = 'schadenshergang';
+    renderHeader();
     addMsg('bot', 'Wie ist der Schaden entstanden?');
     setQR(['Zusammenstoss mit Gegenstand', 'Auffahrunfall', 'Anderer Hergang']);
     return;
@@ -1063,69 +1072,81 @@ function handleQR(opt) {
     S.data.schadenshergang = 'Zusammenstoss mit Gegenstand';
     addMsg('user', opt);
     S.stage = 'hergang';
+    renderHeader();
     addMsg('bot', 'Bitte beschreiben Sie den genauen Unfall- bzw. Schadenhergang.');
     setEnabled(true);
     setTimeout(() => $inp.focus(), 50);
     return;
   }
 
-  // Lenker → hardcoded: Sie selbst
-  if (opt === 'Sie selbst' && S.stage === 'lenker') {
-    S.data.lenker = 'Sie selbst';
+  // Lenker (any option)
+  if (S.stage === 'lenker') {
+    S.data.lenker = opt;
     addMsg('user', opt);
     S.stage = 'verantwortung';
-    addMsg('bot', 'Fühlen Sie sich verantwortlich für den Unfall?');
+    renderHeader();
+    addMsg('bot', 'Fühlen Sie sich verantwortlich für diesen Unfall?');
     setQR(['Ja', 'Nein', 'Teilweise']);
     return;
   }
 
-  // Verantwortung → hardcoded: Ja
-  if (opt === 'Ja' && S.stage === 'verantwortung') {
-    S.data.verantwortung = 'Ja';
+  // Verantwortung (any option)
+  if (S.stage === 'verantwortung') {
+    S.data.verantwortung = opt;
     addMsg('user', opt);
     S.stage = 'polizeirapport';
+    renderHeader();
     addMsg('bot', 'Wurde ein Polizeirapport erstellt?');
     setQR(['Ja', 'Nein']);
     return;
   }
 
-  // Polizeirapport → hardcoded: Nein
-  if (opt === 'Nein' && S.stage === 'polizeirapport') {
-    S.data.polizeirapport = 'Nein';
+  // Polizeirapport (any option)
+  if (S.stage === 'polizeirapport') {
+    S.data.polizeirapport = opt;
     addMsg('user', opt);
     S.stage = 'einfluss';
-    addMsg('bot', 'Stand die Lenkerin/der Lenker unter Einfluss von Alkohol, Drogen, Medikamenten oder Übermüdung?');
+    renderHeader();
+    const self = S.data.lenker === 'Sie selbst';
+    addMsg('bot', self
+      ? 'Standen Sie zum Zeitpunkt des Unfalls unter Einfluss von Alkohol, Drogen, Medikamenten oder Übermüdung?'
+      : 'Stand die Lenkerin/der Lenker unter Einfluss von Alkohol, Drogen, Medikamenten oder Übermüdung?');
     setQR(['Ja', 'Nein', 'Unbekannt']);
     return;
   }
 
-  // Einfluss → hardcoded: Nein
-  if (opt === 'Nein' && S.stage === 'einfluss') {
-    S.data.einfluss = 'Nein';
+  // Einfluss (any option)
+  if (S.stage === 'einfluss') {
+    S.data.einfluss = opt;
     addMsg('user', opt);
     S.stage = 'geschwindigkeit';
-    addMsg('bot', 'War massiv überhöhte Geschwindigkeit im Spiel?');
+    renderHeader();
+    const self = S.data.lenker === 'Sie selbst';
+    addMsg('bot', self
+      ? 'Haben Sie die Geschwindigkeit massiv überschritten?'
+      : 'War massiv überhöhte Geschwindigkeit im Spiel?');
     setQR(['Ja', 'Nein', 'Unbekannt']);
     return;
   }
 
-  // Geschwindigkeit → hardcoded: Nein
-  if (opt === 'Nein' && S.stage === 'geschwindigkeit') {
-    S.data.geschwindigkeit = 'Nein';
+  // Geschwindigkeit (any option)
+  if (S.stage === 'geschwindigkeit') {
+    S.data.geschwindigkeit = opt;
     addMsg('user', opt);
     S.stage = 'unfallprotokoll';
+    renderHeader();
     addMsg('bot', 'Wurde ein Unfallprotokoll erstellt?');
     setQR(['Ja', 'Nein']);
     return;
   }
 
-  // Unfallprotokoll → hardcoded: Nein → direkt zur Zusammenfassung
-  if (opt === 'Nein' && S.stage === 'unfallprotokoll') {
-    S.data.unfallprotokoll = 'Nein';
+  // Unfallprotokoll (any option) → Zusammenfassung
+  if (S.stage === 'unfallprotokoll') {
+    S.data.unfallprotokoll = opt;
     addMsg('user', opt);
     S.stage = 'summary';
     renderHeader();
-    addMsg('bot', 'Vielen Dank! Hier sind Ihre Angaben zur Überprüfung:');
+    addMsg('bot', 'Vielen Dank für Ihre Angaben! Hier ist Ihre Zusammenfassung:');
     setTimeout(showSummaryCard, 200);
     setTimeout(() => setQR(['Angaben bestätigen']), 400);
     return;

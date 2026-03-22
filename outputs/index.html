@@ -206,6 +206,25 @@
       border-radius: var(--rs); padding: 9px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
     }
 
+    /* Geburtsdatum-Eingabe */
+    #bday-area { display: none; align-items: center; gap: 8px; margin-bottom: 8px; }
+    #bday-area.show { display: flex; }
+    #bday-wrap { position: relative; flex: 1; display: flex; align-items: center; }
+    #bday-inp {
+      flex: 1; border: 1.5px solid var(--primary); border-radius: var(--rs);
+      padding: 9px 44px 9px 12px; font-size: 15px; outline: none; width: 100%;
+    }
+    #bday-cal-wrap {
+      position: absolute; right: 10px; width: 28px; height: 28px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #bday-cal-wrap span { font-size: 18px; pointer-events: none; }
+    #bday-hidden { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    #bday-ok {
+      background: var(--primary); color: #fff; border: none;
+      border-radius: var(--rs); padding: 9px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+
     #gar-area { display: none; flex-direction: column; margin-bottom: 8px; }
     #gar-area.show { display: flex; }
 
@@ -268,6 +287,16 @@
     <div id="dp-area">
       <input type="date" id="dp">
       <button id="dp-ok">OK</button>
+    </div>
+    <div id="bday-area">
+      <div id="bday-wrap">
+        <input type="text" id="bday-inp" placeholder="TT.MM.JJJJ" maxlength="10" inputmode="numeric" autocomplete="bday">
+        <div id="bday-cal-wrap">
+          <span>📅</span>
+          <input type="date" id="bday-hidden" tabindex="-1">
+        </div>
+      </div>
+      <button id="bday-ok">OK</button>
     </div>
     <div id="gar-area"></div>
     <div class="inp-row">
@@ -619,6 +648,10 @@ const $qr     = document.getElementById('qr');
 const $dpArea = document.getElementById('dp-area');
 const $dp     = document.getElementById('dp');
 const $dpOk   = document.getElementById('dp-ok');
+const $bdayArea   = document.getElementById('bday-area');
+const $bdayInp    = document.getElementById('bday-inp');
+const $bdayHidden = document.getElementById('bday-hidden');
+const $bdayOk     = document.getElementById('bday-ok');
 const $garArea= document.getElementById('gar-area');
 const $inp    = document.getElementById('msg-inp');
 const $mic    = document.getElementById('mic-btn');
@@ -875,9 +908,37 @@ $dpOk.addEventListener('click', () => {
   toBot(fmt);
 });
 
+// Geburtsdatum: Auto-Format TT.MM.JJJJ beim Tippen
+$bdayInp.addEventListener('input', () => {
+  let v = $bdayInp.value.replace(/\D/g, '');
+  if (v.length > 2) v = v.substring(0, 2) + '.' + v.substring(2);
+  if (v.length > 5) v = v.substring(0, 5) + '.' + v.substring(5);
+  $bdayInp.value = v.substring(0, 10);
+});
+$bdayInp.addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitBday();
+});
+// Kalender-Icon → native Picker über hidden input
+$bdayHidden.addEventListener('change', () => {
+  if (!$bdayHidden.value) return;
+  const d = new Date($bdayHidden.value);
+  $bdayInp.value = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+});
+$bdayOk.addEventListener('click', submitBday);
+function submitBday() {
+  const v = $bdayInp.value.trim();
+  if (!/^\d{2}\.\d{2}\.\d{4}$/.test(v)) { $bdayInp.focus(); return; }
+  $bdayArea.classList.remove('show');
+  $bdayInp.value = '';
+  addMsg('user', v);
+  toBot(v);
+}
+
 function clearInputUi() {
   $qr.innerHTML = '';
   $dpArea.classList.remove('show');
+  $bdayArea.classList.remove('show');
+  $bdayInp.value = '';
   $garArea.classList.remove('show');
   $garArea.innerHTML = '';
 }
@@ -984,11 +1045,17 @@ async function toBot(userMsg) {
 
     // Show quick replies or datepicker
     if (r.showDatepicker) {
-      $dpArea.classList.add('show');
-      const today = new Date().toISOString().split('T')[0];
-      $dp.max = today;
-      // Für Geburtsdatum: weit in die Vergangenheit erlauben
-      $dp.min = next === 'geburtsdatum' ? '1900-01-01' : '';
+      if (next === 'geburtsdatum') {
+        $bdayHidden.max = new Date().toISOString().split('T')[0];
+        $bdayHidden.min = '1900-01-01';
+        $bdayArea.classList.add('show');
+        setTimeout(() => $bdayInp.focus(), 50);
+      } else {
+        $dpArea.classList.add('show');
+        const today = new Date().toISOString().split('T')[0];
+        $dp.max = today;
+        $dp.min = '';
+      }
     } else if (r.quickReplies && r.quickReplies.length) {
       setQR(r.quickReplies);
     }

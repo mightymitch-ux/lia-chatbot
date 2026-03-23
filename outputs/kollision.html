@@ -1000,7 +1000,11 @@ function pickGarage(name, garageDiv) {
     c.style.opacity = c.querySelector('.g-name').textContent === name ? '1' : '0.4';
   });
   addMsg('user', name);
-  toBot(name);
+  // Direkt zur Telefonnummer-Frage — kein Claude-Call nötig
+  S.stage = 'phone';
+  setEnabled(true);
+  addMsg('bot', 'Super! Für allfällige Rückfragen: Wie lautet Ihre Telefonnummer?');
+  setTimeout(() => $inp.focus(), 50);
 }
 
 function showCompleteCard() {

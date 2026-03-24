@@ -959,7 +959,7 @@ function showPhoneQuestion() {
 }
 
 function showRepairQuestion() {
-  const repairMsg = 'Wurde Ihr Fahrzeug bereits repariert, oder möchten Sie es reparieren lassen?';
+  const repairMsg = 'Wurde Ihr Fahrzeug bereits repariert?';
   addMsg('bot', repairMsg);
   S.msgs.push({role:'assistant', content: JSON.stringify({
     text: repairMsg, quickReplies: ['Bereits repariert', 'Reparatur gewünscht'],
@@ -968,8 +968,7 @@ function showRepairQuestion() {
   })});
   S.stage = 'repair';
   setQR(['Bereits repariert', 'Reparatur gewünscht']);
-  setEnabled(true);
-  $inp.focus();
+  setEnabled(false);
 }
 
 function showGarageCards() {
@@ -1112,12 +1111,19 @@ function handleQR(opt) {
     return;
   }
 
-  // Repair → Partnergaragen
-  if (opt === 'Reparatur gewünscht' && S.stage === 'repair') {
-    S.data.repariert = false;
+  // Repair → bypass Claude for both options
+  if (S.stage === 'repair') {
+    S.data.repariert = (opt === 'Bereits repariert');
     addMsg('user', opt);
-    S.stage = 'garages';
-    setTimeout(showGarageCards, 400);
+    if (opt === 'Reparatur gewünscht') {
+      S.stage = 'garages';
+      setTimeout(showGarageCards, 400);
+    } else {
+      S.stage = 'phone';
+      setEnabled(true);
+      addMsg('bot', 'Alles klar! Für allfällige Rückfragen: Wie lautet Ihre Telefonnummer?');
+      setTimeout(() => $inp.focus(), 50);
+    }
     return;
   }
 

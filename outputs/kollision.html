@@ -960,6 +960,8 @@ function showCoverageMsg(text) {
   const t = ts();
   const div = document.createElement('div');
   div.className = 'msg bot';
+  div.style.maxWidth = '100%';
+  div.style.width = '100%';
   div.innerHTML = `
     <div class="bubble" style="padding:12px 14px">${html}</div>
     <div class="meta"><span>${t}</span>
@@ -1049,6 +1051,8 @@ function pickGarage(name, garageDiv) {
 function showCompleteCard(thanksText) {
   const div = document.createElement('div');
   div.className = 'msg bot';
+  div.style.maxWidth = '100%';
+  div.style.width = '100%';
   div.innerHTML = `
     <div class="bubble" style="padding:0;background:transparent;box-shadow:none">
       <div class="done-card">
@@ -1061,8 +1065,8 @@ function showCompleteCard(thanksText) {
         <div style="margin-top:16px;padding-top:14px;border-top:1px solid #eee">
           <div style="font-size:13px;color:#888;margin-bottom:10px">Gesprächsverlauf speichern oder weiterleiten:</div>
           <div style="display:flex;gap:8px">
-            <button onclick="downloadLog()" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--primary);background:#fff;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer">📄 Herunterladen</button>
-            <button onclick="emailLog()" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--primary);background:#fff;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer">✉️ Per Mail</button>
+            <button onclick="downloadLog()" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--primary);background:#fff;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 19v2h14v-2H5z"/></svg> Herunterladen</button>
+            <button onclick="emailLog()" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--primary);background:#fff;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg> Per Mail</button>
           </div>
         </div>
       </div>

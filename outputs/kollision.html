@@ -71,10 +71,12 @@
     .prog-fill  { height: 100%; background: #fff; border-radius: 2px; transition: width .5s ease; width: 0%; }
     .prog-pct   { font-size: 11px; opacity: .85; min-width: 30px; text-align: right; }
     #tags-toggle {
-      background: none; border: none; cursor: pointer; padding: 0 2px;
-      color: rgba(255,255,255,.75); font-size: 13px; line-height: 1; flex-shrink: 0;
-      transition: transform .25s;
+      background: rgba(255,255,255,.15); border: none; border-radius: 50%; cursor: pointer;
+      width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+      color: rgba(255,255,255,.9); font-size: 16px; line-height: 1; flex-shrink: 0;
+      transition: transform .25s, background .2s;
     }
+    #tags-toggle:hover { background: rgba(255,255,255,.28); }
     #tags-toggle.collapsed { transform: rotate(-180deg); }
     #tags-wrap { overflow: hidden; transition: max-height .3s ease, opacity .25s ease; max-height: 120px; }
     #tags-wrap.collapsed { max-height: 0; opacity: 0; }

@@ -836,24 +836,24 @@ function scroll() {
 function showSummaryCard() {
   const d = S.data;
   const rows = [
-    ['Was passiert',    d.ersterHergang,   'ersterHergang'],
-    ['Datum',           d.datum,           'datum'],
-    ['Uhrzeit',         d.uhrzeit,         'uhrzeit'],
-    ['Schadenort Land', d.schadenortLand,  'schadenortLand'],
-    ['Schadenort PLZ',  d.schadenortPlz,   'schadenortPlz'],
-    ['Kontrollschild',  d.kontrollschild,  'kontrollschild'],
-    ['PLZ Wohnort',     d.plz,             'plz'],
-    ['Geburtsdatum',    d.geburtsdatum,    'geburtsdatum'],
-    ['Fahrzeug',        d.fahrzeug,        'fahrzeug'],
-    ['Geschädigtes',    d.wasGeschaedigt,  null],
-    ['Kollisionsart',   d.schadenshergang, null],
-    ['Hergang',         d.hergang,         'hergang'],
-    ['Lenker:in',       d.lenker,          null],
-    ['Verantwortung',   d.verantwortung,   null],
-    ['Polizeirapport',  d.polizeirapport,  null],
-    ['Einfluss',        d.einfluss,        null],
-    ['Geschwindigkeit', d.geschwindigkeit, null],
-    ['Unfallprotokoll', d.unfallprotokoll, null],
+    ['Was ist passiert?',                   d.ersterHergang,   'ersterHergang'],
+    ['Wann ist der Schaden passiert?',       d.datum,           'datum'],
+    ['Um wie viel Uhr?',                     d.uhrzeit,         'uhrzeit'],
+    ['In welchem Land?',                     d.schadenortLand,  'schadenortLand'],
+    ['PLZ des Schadenorts?',                 d.schadenortPlz,   'schadenortPlz'],
+    ['Wie lautet Ihr Kontrollschild?',       d.kontrollschild,  'kontrollschild'],
+    ['An welcher Postleitzahl wohnen Sie?',  d.plz,             'plz'],
+    ['Geburtsdatum?',                        d.geburtsdatum,    'geburtsdatum'],
+    ['Welches Fahrzeug?',                    d.fahrzeug,        'fahrzeug'],
+    ['Was wurde beschädigt?',               d.wasGeschaedigt,  'wasGeschaedigt'],
+    ['Wie ist der Schaden entstanden?',      d.schadenshergang, 'schadenshergang'],
+    ['Wie genau ist es passiert?',           d.hergang,         'hergang'],
+    ['Wer lenkte das Fahrzeug?',             d.lenker,          'lenker'],
+    ['Fühlen Sie sich verantwortlich?',      d.verantwortung,   'verantwortung'],
+    ['Polizeirapport erstellt?',             d.polizeirapport,  'polizeirapport'],
+    ['Unter Einfluss von Alkohol/Drogen?',   d.einfluss,        'einfluss'],
+    ['Massiv überhöhte Geschwindigkeit?',    d.geschwindigkeit, 'geschwindigkeit'],
+    ['Unfallprotokoll erstellt?',            d.unfallprotokoll, 'unfallprotokoll'],
   ].filter(r => r[1]);
 
   const html = `
@@ -885,20 +885,28 @@ function editField(key) {
   S.editMode = true;
   S.editStage = key;
   const cfg = {
-    ersterHergang:  { stage: 'ersterHergang',  label: 'die Unfallbeschreibung', type: 'text' },
-    datum:          { stage: 'datum',          label: 'das Schadensdatum',       type: 'datum' },
-    uhrzeit:        { stage: 'uhrzeit',        label: 'die Uhrzeit',             type: 'time' },
-    schadenortLand: { stage: 'schadenortLand', label: 'das Schadenort-Land',     type: 'land' },
-    schadenortPlz:  { stage: 'schadenortPlz',  label: 'die Schadenort-PLZ',      type: 'text' },
-    kontrollschild: { stage: 'kontrollschild', label: 'das Kontrollschild',      type: 'text' },
-    plz:            { stage: 'plz',            label: 'Ihre Wohnort-PLZ',        type: 'text' },
-    geburtsdatum:   { stage: 'geburtsdatum',   label: 'Ihr Geburtsdatum',        type: 'bday' },
-    fahrzeug:       { stage: 'fahrzeug',       label: 'das Fahrzeug',            type: 'fahrzeug' },
-    hergang:        { stage: 'hergang',        label: 'den genauen Hergang',     type: 'text' },
+    ersterHergang:  { stage: 'ersterHergang',  label: 'die Unfallbeschreibung',       type: 'text' },
+    datum:          { stage: 'datum',          label: 'das Schadensdatum',             type: 'datum' },
+    uhrzeit:        { stage: 'uhrzeit',        label: 'die Uhrzeit',                   type: 'time' },
+    schadenortLand: { stage: 'schadenortLand', label: 'das Schadenort-Land',           type: 'land' },
+    schadenortPlz:  { stage: 'schadenortPlz',  label: 'die Schadenort-PLZ',            type: 'text' },
+    kontrollschild: { stage: 'kontrollschild', label: 'das Kontrollschild',            type: 'text' },
+    plz:            { stage: 'plz',            label: 'Ihre Wohnort-PLZ',              type: 'text' },
+    geburtsdatum:   { stage: 'geburtsdatum',   label: 'Ihr Geburtsdatum',              type: 'bday' },
+    fahrzeug:       { stage: 'fahrzeug',       label: 'das Fahrzeug',                  type: 'fahrzeug' },
+    hergang:        { stage: 'hergang',        label: 'den genauen Hergang',           type: 'text' },
+    wasGeschaedigt: { stage: 'wasGeschaedigt', msg: 'Was wurde beschädigt?',           type: 'qr', opts: ['Mein Fahrzeug', 'Ein anderes Fahrzeug', 'Person', 'Andere Objekte oder Gegenstände'] },
+    schadenshergang:{ stage: 'schadenshergang',msg: 'Wie ist der Schaden entstanden?', type: 'qr', opts: ['Zusammenstoss mit Gegenstand', 'Auffahrunfall', 'Anderer Hergang'] },
+    lenker:         { stage: 'lenker',         msg: getStageQ('lenker'),               type: 'qr', opts: getStageQR('lenker') },
+    verantwortung:  { stage: 'verantwortung',  msg: getStageQ('verantwortung'),        type: 'qr', opts: getStageQR('verantwortung') },
+    polizeirapport: { stage: 'polizeirapport', msg: getStageQ('polizeirapport'),       type: 'qr', opts: getStageQR('polizeirapport') },
+    einfluss:       { stage: 'einfluss',       msg: getStageQ('einfluss'),             type: 'qr', opts: getStageQR('einfluss') },
+    geschwindigkeit:{ stage: 'geschwindigkeit',msg: getStageQ('geschwindigkeit'),      type: 'qr', opts: getStageQR('geschwindigkeit') },
+    unfallprotokoll:{ stage: 'unfallprotokoll',msg: getStageQ('unfallprotokoll'),      type: 'qr', opts: getStageQR('unfallprotokoll') },
   }[key];
   if (!cfg) return;
   S.stage = cfg.stage;
-  addMsg('bot', `Bitte geben Sie ${cfg.label} erneut ein.`);
+  addMsg('bot', cfg.msg || `Bitte geben Sie ${cfg.label} erneut ein.`);
   if (cfg.type === 'datum') {
     setQR(['Heute', 'Gestern', 'Genaues Datum']);
   } else if (cfg.type === 'bday') {
@@ -913,6 +921,8 @@ function editField(key) {
     $landArea.classList.add('show');
   } else if (cfg.type === 'fahrzeug') {
     $fahrzeugArea.classList.add('show');
+  } else if (cfg.type === 'qr') {
+    setQR(cfg.opts);
   } else {
     setEnabled(true);
     $inp.focus();
@@ -1121,10 +1131,29 @@ function firstUnfilledQR(fromStage) {
 function handleQR(opt) {
   clearInputUi();
 
-  // Datepicker
+  // Datepicker (Priorität: immer öffnen, auch im Edit-Modus; Datum-Wert wird über toBot gesetzt)
   if (opt === 'Genaues Datum') {
     $dpArea.classList.add('show');
     $dp.max = new Date().toISOString().split('T')[0];
+    return;
+  }
+
+  // Edit-Modus: QR-Auswahl aktualisiert nur dieses eine Feld, dann zurück zur Zusammenfassung
+  if (S.editMode) {
+    const key = S.editStage;
+    addMsg('user', opt);
+    if (key === 'datum') {
+      S.data.datum = opt === 'Heute' ? 'heute' : opt === 'Gestern' ? 'gestern' : opt;
+    } else {
+      S.data[key] = opt;
+    }
+    S.editMode = false;
+    S.editStage = null;
+    S.stage = 'summary';
+    renderHeader();
+    addMsg('bot', 'Danke! Hier sind Ihre aktualisierten Angaben:');
+    setTimeout(showSummaryCard, 200);
+    setTimeout(() => setQR(['Angaben bestätigen']), 500);
     return;
   }
 

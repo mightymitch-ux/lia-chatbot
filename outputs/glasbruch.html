@@ -263,11 +263,6 @@
     #snd-btn:hover { background: var(--primary-light); }
     #snd-btn:disabled { opacity: .4; cursor: not-allowed; }
 
-    /* Summary table */
-    .sum-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    .sum-table td { padding: 5px 6px; vertical-align: top; }
-    .sum-table td:first-child { color: var(--muted); width: 45%; }
-    .sum-table td:last-child { font-weight: 500; }
   </style>
 </head>
 <body>
@@ -854,13 +849,15 @@ function showGarageCards() {
     list.appendChild(c);
   });
   $chat.appendChild(div);
-  requestAnimationFrame(() => { wrap.style.maxHeight = wrap.scrollHeight + 'px'; });
+  requestAnimationFrame(() => {
+    wrap.style.maxHeight = wrap.scrollHeight + 'px';
+    scroll();
+  });
   hd.addEventListener('click', () => {
     const open = wrap.style.maxHeight !== '0px';
     wrap.style.maxHeight = open ? '0px' : wrap.scrollHeight + 'px';
     chev.textContent = open ? '▾' : '▴';
   });
-  scroll();
 }
 
 function pickGarage(name, garageDiv) {
@@ -1029,11 +1026,19 @@ async function callClaude(userMsg) {
   const hist = S.msgs.slice(-MAX_HIST);
 
   const body = { model: MODEL, max_tokens: 1024, system: SYS, messages: hist };
-  const res = await fetch(WORKER, {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify(body)
-  });
+  const ctrl = new AbortController();
+  const timeout = setTimeout(() => ctrl.abort(), 30000);
+  let res;
+  try {
+    res = await fetch(WORKER, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+      signal: ctrl.signal
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
   if (!res.ok) throw new Error('HTTP ' + res.status);
 
   const data = await res.json();
@@ -1161,7 +1166,7 @@ async function toBot(userMsg) {
   }
 
   S.loading = false;
-  const noTextInput = ['coverage', 'garages', 'complete'];
+  const noTextInput = ['coverage', 'garages', 'complete', 'summary', 'repair'];
   if (!noTextInput.includes(S.stage)) { setEnabled(true); $inp.focus(); }
 }
 
@@ -1170,7 +1175,7 @@ async function toBot(userMsg) {
 // ═══════════════════════════════════════════
 function extractDirect(msg) {
   const st = S.stage;
-  if ((st === 'schadenhergang' || st === 'init') && !S.data.schadenhergang && msg.length > 2)
+  if (st === 'schadenhergang' && !S.data.schadenhergang && msg.length > 2)
     S.data.schadenhergang = msg;
   if (st === 'datum' || msg === 'Heute' || msg === 'Gestern') {
     if (!S.data.datum) {
@@ -1295,7 +1300,7 @@ function buildRec() {
       const msg = lastTranscript.trim();
       lastTranscript = '';
       $inp.value = '';
-      setTimeout(() => { clearInputUi(); addMsg('user', msg); toBot(msg); }, 300);
+      setTimeout(() => { if (!S.loading) { clearInputUi(); addMsg('user', msg); toBot(msg); } }, 300);
     }
   };
 

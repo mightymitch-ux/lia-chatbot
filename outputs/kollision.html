@@ -305,11 +305,6 @@
     #snd-btn:hover { background: var(--primary-light); }
     #snd-btn:disabled { opacity: .4; cursor: not-allowed; }
 
-    /* Summary table */
-    .sum-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    .sum-table td { padding: 5px 6px; vertical-align: top; }
-    .sum-table td:first-child { color: var(--muted); width: 45%; }
-    .sum-table td:last-child { font-weight: 500; }
   </style>
 </head>
 <body>
@@ -415,11 +410,6 @@ const TAG_MAP = {
   unfallprotokoll:'Unfallprotokoll'
 };
 
-const DMG_OPTS = [
-  'Frontscheibe','Seitenscheibe','Dachscheibe','Heckscheibe',
-  'Scheinwerfer / Nebelscheinwerfer','Seitenspiegel',
-  'Blinkerglas','Rücklichter','Anderes Glas','Mehrere Gläser'
-];
 
 const GARAGES = {
   // ── Zürich Stadt ──────────────────────────
@@ -950,7 +940,7 @@ function showCoverageMsg(text) {
           <div class="cov-row"><div class="cov-ck">${covCheckSvg()}</div> Schaden ist gedeckt</div>
           <div class="cov-row"><div class="cov-ck">${covCheckSvg()}</div> Kein Selbstbehalt</div>
           <div class="cov-row"><div class="cov-ck">${covCheckSvg()}</div> Keine Auswirkung auf Ihre Prämie</div>
-          <div class="cov-car"><span class="cov-car-icon">🚗</span> Opel Corsa i30cw</div>
+          <div class="cov-car"><span class="cov-car-icon">🚗</span> Opel Corsa i30 CW</div>
         </div>
       </div>
     </div>`;
@@ -1018,13 +1008,15 @@ function showGarageCards() {
     list.appendChild(c);
   });
   $chat.appendChild(div);
-  requestAnimationFrame(() => { wrap.style.maxHeight = wrap.scrollHeight + 'px'; });
+  requestAnimationFrame(() => {
+    wrap.style.maxHeight = wrap.scrollHeight + 'px';
+    scroll();
+  });
   hd.addEventListener('click', () => {
     const open = wrap.style.maxHeight !== '0px';
     wrap.style.maxHeight = open ? '0px' : wrap.scrollHeight + 'px';
     chev.textContent = open ? '▾' : '▴';
   });
-  scroll();
 }
 
 function pickGarage(name, garageDiv) {
@@ -1109,24 +1101,19 @@ function getStageQR(stage) {
   }[stage] || [];
 }
 
-// Returns the first unfilled QR stage AFTER fromStage (or 'summary')
-function advanceQR(fromStage) {
-  let i = QR_SEQ.indexOf(fromStage) + 1;
+// Returns the first unfilled QR stage starting at fromStage + offset (or 'summary').
+// offset=1 → search AFTER fromStage (advance); offset=0 → search FROM fromStage (re-check).
+function findQR(fromStage, offset) {
+  let i = QR_SEQ.indexOf(fromStage);
+  if (i < 0) i = 0; else i += offset;
   for (; i < QR_SEQ.length; i++) {
     if (!S.data[QR_SEQ[i]]) return QR_SEQ[i];
   }
   return 'summary';
 }
 
-// Returns the first unfilled QR stage starting FROM fromStage (or 'summary')
-function firstUnfilledQR(fromStage) {
-  let i = QR_SEQ.indexOf(fromStage);
-  if (i < 0) i = 0;
-  for (; i < QR_SEQ.length; i++) {
-    if (!S.data[QR_SEQ[i]]) return QR_SEQ[i];
-  }
-  return 'summary';
-}
+function advanceQR(fromStage)     { return findQR(fromStage, 1); }
+function firstUnfilledQR(fromStage) { return findQR(fromStage, 0); }
 
 function handleQR(opt) {
   clearInputUi();
@@ -1363,7 +1350,7 @@ function setEnabled(on) {
 // ═══════════════════════════════════════════
 function buildStatusBlock() {
   const d = S.data;
-  return `[STATUS – bereits erfasst: ersterHergang=${d.ersterHergang?'✓':'–'} | datum=${d.datum||'–'} | uhrzeit=${d.uhrzeit||'–'} | schadenortLand=${d.schadenortLand||'–'} | schadenortPlz=${d.schadenortPlz||'–'} | kontrollschild=${d.kontrollschild||'–'} | plz=${d.plz||'–'} | geburtsdatum=${d.geburtsdatum||'–'} | fahrzeug=${d.fahrzeug||'–'} | lenker=${d.lenker||'–'} | polizeirapport=${d.polizeirapport||'–'} | einfluss=${d.einfluss||'–'} | geschwindigkeit=${d.geschwindigkeit||'–'} | unfallprotokoll=${d.unfallprotokoll||'–'}]`;
+  return `[STATUS – bereits erfasst: ersterHergang=${d.ersterHergang?'✓':'–'} | datum=${d.datum||'–'} | uhrzeit=${d.uhrzeit||'–'} | schadenortLand=${d.schadenortLand||'–'} | schadenortPlz=${d.schadenortPlz||'–'} | kontrollschild=${d.kontrollschild||'–'} | plz=${d.plz||'–'} | geburtsdatum=${d.geburtsdatum||'–'} | fahrzeug=${d.fahrzeug||'–'} | wasGeschaedigt=${d.wasGeschaedigt||'–'} | schadenshergang=${d.schadenshergang||'–'} | hergang=${d.hergang?'✓':'–'} | lenker=${d.lenker||'–'} | verantwortung=${d.verantwortung||'–'} | polizeirapport=${d.polizeirapport||'–'} | einfluss=${d.einfluss||'–'} | geschwindigkeit=${d.geschwindigkeit||'–'} | unfallprotokoll=${d.unfallprotokoll||'–'}]`;
 }
 
 async function callClaude(userMsg) {
@@ -1374,11 +1361,19 @@ async function callClaude(userMsg) {
   const hist = S.msgs.slice(-MAX_HIST);
 
   const body = { model: MODEL, max_tokens: 1024, system: SYS, messages: hist };
-  const res = await fetch(WORKER, {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify(body)
-  });
+  const ctrl = new AbortController();
+  const timeout = setTimeout(() => ctrl.abort(), 30000);
+  let res;
+  try {
+    res = await fetch(WORKER, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+      signal: ctrl.signal
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
   if (!res.ok) throw new Error('HTTP ' + res.status);
 
   const data = await res.json();
@@ -1554,7 +1549,7 @@ async function toBot(userMsg) {
   }
 
   S.loading = false;
-  const noTextInput = ['uhrzeit','schadenortLand','fahrzeug','wasGeschaedigt','schadenshergang','lenker','verantwortung','polizeirapport','einfluss','geschwindigkeit','unfallprotokoll','coverage','repair','garages','complete'];
+  const noTextInput = ['uhrzeit','schadenortLand','fahrzeug','wasGeschaedigt','schadenshergang','lenker','verantwortung','polizeirapport','einfluss','geschwindigkeit','unfallprotokoll','coverage','repair','garages','complete','summary'];
   if (!noTextInput.includes(S.stage)) { setEnabled(true); $inp.focus(); }
 }
 
@@ -1563,7 +1558,7 @@ async function toBot(userMsg) {
 // ═══════════════════════════════════════════
 function extractDirect(msg) {
   const st = S.stage;
-  if ((st === 'ersterHergang' || st === 'init') && !S.data.ersterHergang && msg.length > 2)
+  if (st === 'ersterHergang' && !S.data.ersterHergang && msg.length > 2)
     S.data.ersterHergang = msg;
   if (st === 'datum' || msg === 'Heute' || msg === 'Gestern') {
     if (!S.data.datum) {
@@ -1688,7 +1683,7 @@ function buildRec() {
       const msg = lastTranscript.trim();
       lastTranscript = '';
       $inp.value = '';
-      setTimeout(() => { clearInputUi(); addMsg('user', msg); toBot(msg); }, 300);
+      setTimeout(() => { if (!S.loading) { clearInputUi(); addMsg('user', msg); toBot(msg); } }, 300);
     }
   };
 

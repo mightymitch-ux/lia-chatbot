@@ -1406,6 +1406,15 @@ async function toBot(userMsg) {
   setEnabled(false);
   clearInputUi();
 
+  // Phone stage: store number and show complete card directly — no Claude call needed
+  if (S.stage === 'phone') {
+    if (userMsg.length >= 7) S.data.telefon = userMsg;
+    S.stage = 'complete';
+    S.loading = false;
+    showCompleteCard('Vielen Dank! Ihre Schadenmeldung ist bei uns eingegangen. Wir werden uns bei Ihnen melden.');
+    return;
+  }
+
   // Edit mode: update field directly, no Claude call needed
   if (S.editMode) {
     const key = S.editStage;

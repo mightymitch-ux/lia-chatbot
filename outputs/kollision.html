@@ -1157,6 +1157,14 @@ function handleQR(opt) {
     return;
   }
 
+  // Datum Quick Replies (normal flow)
+  if ((opt === 'Heute' || opt === 'Gestern') && S.stage === 'datum') {
+    S.data.datum = opt === 'Heute' ? 'heute' : 'gestern';
+    addMsg('user', opt);
+    toBot(opt);
+    return;
+  }
+
   // Summary confirmed → coverage card → phone question
   if (opt === 'Angaben bestätigen' && S.stage === 'summary') {
     addMsg('user', opt);
@@ -1348,6 +1356,7 @@ function clearInputUi() {
   $bdayArea.classList.remove('show');
   $bdayInp.value = '';
   $timeArea.classList.remove('show');
+  $timeInp.value = '';
   $landArea.classList.remove('show');
   $fahrzeugArea.classList.remove('show');
 }
@@ -1535,6 +1544,8 @@ async function toBot(userMsg) {
       setTimeout(() => $timeInp.focus(), 50);
     } else if (next === 'schadenortLand') {
       $landArea.classList.add('show');
+    } else if (next === 'datum') {
+      setQR(['Heute', 'Gestern', 'Genaues Datum']);
     } else if (next === 'fahrzeug') {
       $fahrzeugArea.classList.add('show');
     } else if (r.showDatepicker) {
@@ -1562,7 +1573,7 @@ async function toBot(userMsg) {
   }
 
   S.loading = false;
-  const noTextInput = ['uhrzeit','schadenortLand','fahrzeug','wasGeschaedigt','schadenshergang','lenker','verantwortung','polizeirapport','einfluss','geschwindigkeit','unfallprotokoll','coverage','repair','garages','complete','summary'];
+  const noTextInput = ['datum','uhrzeit','schadenortLand','fahrzeug','wasGeschaedigt','schadenshergang','lenker','verantwortung','polizeirapport','einfluss','geschwindigkeit','unfallprotokoll','coverage','repair','garages','complete','summary'];
   if (!noTextInput.includes(S.stage)) { setEnabled(true); $inp.focus(); }
 }
 

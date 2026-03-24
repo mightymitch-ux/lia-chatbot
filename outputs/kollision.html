@@ -348,7 +348,7 @@
       <button id="bday-ok">OK</button>
     </div>
     <div id="time-area">
-      <input type="time" id="time-inp">
+      <input type="text" id="time-inp" placeholder="00:00" inputmode="numeric">
       <button id="time-ok">OK</button>
     </div>
     <div id="land-area">
@@ -1230,9 +1230,14 @@ $dpOk.addEventListener('click', () => {
 
 // Uhrzeit
 $timeOk.addEventListener('click', () => {
-  if (!$timeInp.value) return;
-  const parts = $timeInp.value.split(':');
-  const fmt = `${parts[0]}:${parts[1]} Uhr`;
+  const raw = $timeInp.value.trim();
+  if (!raw) return;
+  const clean = raw.replace('.', ':');
+  const parts = clean.includes(':') ? clean.split(':') : [clean.slice(0,2), clean.slice(2,4)];
+  const h = (parts[0] || '00').padStart(2,'0');
+  const m = (parts[1] || '00').padStart(2,'0');
+  const fmt = `${h}:${m} Uhr`;
+  $timeInp.value = '';
   $timeArea.classList.remove('show');
   addMsg('user', fmt);
   toBot(fmt);

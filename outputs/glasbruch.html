@@ -239,8 +239,6 @@
       border-radius: var(--rs); padding: 9px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
     }
 
-    #gar-area { display: none; flex-direction: column; margin-bottom: 8px; }
-    #gar-area.show { display: flex; }
 
     .inp-row { display: flex; gap: 8px; align-items: center; }
     #msg-inp {
@@ -307,7 +305,6 @@
       <label id="bday-cal-btn"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M20 3h-1V1h-2v2H7V1H5v2H4C2.9 3 2 3.9 2 5v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 18H4V8h16v13z"/></svg><input type="date" id="bday-hidden" tabindex="-1"></label>
       <button id="bday-ok">OK</button>
     </div>
-    <div id="gar-area"></div>
     <div class="inp-row">
       <input type="text" id="msg-inp" placeholder="Ihre Nachricht..." autocomplete="off" spellcheck="false">
       <button class="icon-btn" id="mic-btn" title="Spracheingabe">🎤</button>
@@ -663,7 +660,6 @@ const $bdayArea   = document.getElementById('bday-area');
 const $bdayInp    = document.getElementById('bday-inp');
 const $bdayHidden = document.getElementById('bday-hidden');
 const $bdayOk     = document.getElementById('bday-ok');
-const $garArea= document.getElementById('gar-area');
 const $inp    = document.getElementById('msg-inp');
 const $mic    = document.getElementById('mic-btn');
 const $snd    = document.getElementById('snd-btn');
@@ -1008,8 +1004,6 @@ function clearInputUi() {
   $dpArea.classList.remove('show');
   $bdayArea.classList.remove('show');
   $bdayInp.value = '';
-  $garArea.classList.remove('show');
-  $garArea.innerHTML = '';
 }
 
 function setEnabled(on) {
@@ -1166,7 +1160,8 @@ async function toBot(userMsg) {
   }
 
   S.loading = false;
-  if (S.stage !== 'complete') { setEnabled(true); $inp.focus(); }
+  const noTextInput = ['coverage', 'garages', 'complete'];
+  if (!noTextInput.includes(S.stage)) { setEnabled(true); $inp.focus(); }
 }
 
 // ═══════════════════════════════════════════
@@ -1193,8 +1188,6 @@ function extractDirect(msg) {
     S.data.geburtsdatum = msg;
   if (st === 'phone' && !S.data.telefon && msg.length >= 7)
     S.data.telefon = msg;
-  if (msg === 'Ja, bereits repariert') S.data.repariert = true;
-  if (msg === 'Nein, Reparatur gewünscht') S.data.repariert = false;
 }
 
 // ═══════════════════════════════════════════

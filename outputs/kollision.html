@@ -281,8 +281,6 @@
       border-radius: var(--rs); padding: 9px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
     }
 
-    #gar-area { display: none; flex-direction: column; margin-bottom: 8px; }
-    #gar-area.show { display: flex; }
 
     .inp-row { display: flex; gap: 8px; align-items: center; }
     #msg-inp {
@@ -378,7 +376,6 @@
         <button id="fahrzeug-ok">OK</button>
       </div>
     </div>
-    <div id="gar-area"></div>
     <div class="inp-row">
       <input type="text" id="msg-inp" placeholder="Ihre Nachricht..." autocomplete="off" spellcheck="false">
       <button class="icon-btn" id="mic-btn" title="Spracheingabe">🎤</button>
@@ -760,7 +757,6 @@ const $bdayArea   = document.getElementById('bday-area');
 const $bdayInp    = document.getElementById('bday-inp');
 const $bdayHidden = document.getElementById('bday-hidden');
 const $bdayOk     = document.getElementById('bday-ok');
-const $garArea= document.getElementById('gar-area');
 const $timeArea = document.getElementById('time-area');
 const $timeInp  = document.getElementById('time-inp');
 const $timeOk   = document.getElementById('time-ok');
@@ -1316,8 +1312,6 @@ function clearInputUi() {
   $timeArea.classList.remove('show');
   $landArea.classList.remove('show');
   $fahrzeugArea.classList.remove('show');
-  $garArea.classList.remove('show');
-  $garArea.innerHTML = '';
 }
 
 function setEnabled(on) {

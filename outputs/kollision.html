@@ -171,6 +171,13 @@
     .garage-card:active, .garage-card:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(56,53,164,.15); }
     .g-name { font-weight: 600; font-size: 14px; color: var(--text); }
     .g-addr { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .garage-bubble-hd {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+      padding: 12px 14px; cursor: pointer; font-size: 15px; line-height: 1.5;
+    }
+    .garage-bubble-hd:active { background: rgba(0,0,0,.03); border-radius: var(--rs) var(--rs) 0 0; }
+    .garage-chev { font-size: 13px; color: var(--primary); flex-shrink: 0; margin-top: 3px; }
+    .garage-list-wrap { overflow: hidden; transition: max-height .3s ease; padding: 0 10px 8px; }
 
     /* Complete card */
     .done-card { background: #fff; border-radius: var(--rs); padding: 18px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
@@ -976,10 +983,16 @@ function showGarageCards() {
   const all = [...gs, { name: 'Selbst organisieren', addr: 'Ich organisiere die Reparatur eigenständig' }];
   const div = document.createElement('div');
   div.className = 'msg bot';
-  div.innerHTML = `<div class="bubble" style="padding:12px 14px">
-    <div style="margin-bottom:10px;font-size:15px;line-height:1.5">Sie können nun eine der folgenden Partnergaragen für die Reparatur auswählen:</div>
-    <div class="garage-list"></div>
+  div.innerHTML = `<div class="bubble" style="padding:0;overflow:hidden">
+    <div class="garage-bubble-hd">
+      <span>Sie können eine der folgenden Partnergaragen für die Reparatur auswählen:</span>
+      <span class="garage-chev">▴</span>
+    </div>
+    <div class="garage-list-wrap"><div class="garage-list"></div></div>
   </div>`;
+  const hd   = div.querySelector('.garage-bubble-hd');
+  const wrap = div.querySelector('.garage-list-wrap');
+  const chev = div.querySelector('.garage-chev');
   const list = div.querySelector('.garage-list');
   all.forEach(g => {
     const c = document.createElement('div');
@@ -989,6 +1002,12 @@ function showGarageCards() {
     list.appendChild(c);
   });
   $chat.appendChild(div);
+  requestAnimationFrame(() => { wrap.style.maxHeight = wrap.scrollHeight + 'px'; });
+  hd.addEventListener('click', () => {
+    const open = wrap.style.maxHeight !== '0px';
+    wrap.style.maxHeight = open ? '0px' : wrap.scrollHeight + 'px';
+    chev.textContent = open ? '▾' : '▴';
+  });
   scroll();
 }
 

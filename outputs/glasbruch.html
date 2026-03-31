@@ -1318,6 +1318,7 @@ function buildRec() {
     }
     const text = final || interim;
     if (text) { lastTranscript = text; $inp.value = text; }
+    if (final && rec) { try { rec.stop(); } catch(e) {} }
   };
 
   r.onend = () => {

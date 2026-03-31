@@ -1109,6 +1109,17 @@ async function toBot(userMsg) {
     return;
   }
 
+  // Phone stage: bypass Claude — save number and go directly to complete
+  if (S.stage === 'phone') {
+    S.data.telefon = userMsg;
+    renderHeader();
+    S.stage = 'complete';
+    S.loading = false;
+    setEnabled(false);
+    setTimeout(() => showCompleteCard('Vielen Dank! Wir werden uns bei Bedarf unter dieser Nummer bei Ihnen melden.'), 400);
+    return;
+  }
+
   showTyping();
   try {
     const r = await callClaude(userMsg);
